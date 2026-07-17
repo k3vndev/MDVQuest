@@ -26,11 +26,11 @@ jobs:
         run: mvn -B -U clean package
 
       - name: Verificar firmas Bukkit/Paper
-        run: bash scripts/verify-bytecode.sh target/MDVQuest-1.1.0.jar
+        run: bash scripts/verify-bytecode.sh target/MDVQuest-1.1.1.jar
 
       - name: Publicar JAR
         uses: actions/upload-artifact@v4
         with:
-          name: MDVQuest-1.1.0
-          path: target/MDVQuest-1.1.0.jar
+          name: MDVQuest-1.1.1
+          path: target/MDVQuest-1.1.1.jar
           if-no-files-found: error
