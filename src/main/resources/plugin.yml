@@ -1,0 +1,27 @@
+name: MDVQuest
+version: 1.0.0
+main: com.mdvcraft.mdvquest.MDVQuestPlugin
+api-version: '1.21'
+author: MDVCRAFT
+website: https://mdvcraft.xyz
+softdepend:
+  - MDVSocial
+  - MDVRecetas
+  - MDVHeadOres
+  - MMOItems
+  - MMOCore
+  - MythicMobs
+  - PlaceholderAPI
+  - MDVClans
+commands:
+  mdvquest:
+    description: Abre y administra las misiones rotativas.
+    usage: /mdvquest
+    aliases: [misiones, quests, quest]
+permissions:
+  mdvquest.use:
+    description: Permite consultar y reclamar misiones.
+    default: true
+  mdvquest.admin:
+    description: Permite recargar, rotar y reportar progreso manualmente.
+    default: op

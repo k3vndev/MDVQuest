@@ -1,0 +1,128 @@
+# ==========================================================
+# MDVQuest 1.0.0 - Misiones individuales globales
+# Los dias son dias REALES, no dias de Minecraft.
+# ==========================================================
+
+time-zone: "America/Argentina/Cordoba"
+
+database:
+  file: "mdvquest.db"
+  flush-interval-seconds: 30
+  cleanup-interval-seconds: 60
+  busy-timeout-ms: 5000
+  incremental-vacuum-pages: 64
+
+performance:
+  # No se escanean inventarios ni jugadores periodicamente.
+  # El progreso se procesa solamente cuando ocurre un evento relevante.
+  progress-actionbar: true
+  progress-actionbar-cooldown-ms: 900
+  unload-player-cache-on-quit: true
+
+rotations:
+  daily:
+    enabled: true
+    duration-days: 1
+    mission-count: 4
+    anchor-date: "2026-01-01"
+    reset-time: "00:00"
+    seed: "mdvquest-daily"
+
+  two-days:
+    enabled: true
+    duration-days: 2
+    mission-count: 2
+    anchor-date: "2026-01-01"
+    reset-time: "00:00"
+    seed: "mdvquest-two-days"
+
+  three-days:
+    enabled: false
+    duration-days: 3
+    mission-count: 1
+    anchor-date: "2026-01-01"
+    reset-time: "00:00"
+    seed: "mdvquest-three-days"
+
+  four-days:
+    enabled: true
+    duration-days: 4
+    mission-count: 1
+    anchor-date: "2026-01-01"
+    reset-time: "00:00"
+    seed: "mdvquest-four-days"
+
+  five-days:
+    enabled: false
+    duration-days: 5
+    mission-count: 1
+    anchor-date: "2026-01-01"
+    reset-time: "00:00"
+    seed: "mdvquest-five-days"
+
+  six-days:
+    enabled: false
+    duration-days: 6
+    mission-count: 1
+    anchor-date: "2026-01-01"
+    reset-time: "00:00"
+    seed: "mdvquest-six-days"
+
+  weekly:
+    enabled: true
+    duration-days: 7
+    mission-count: 3
+    anchor-date: "2026-01-05"
+    reset-time: "00:00"
+    seed: "mdvquest-weekly"
+
+menus:
+  title: "&8Misiones"
+  detail-title: "&8Mision: %mission%"
+  size: 54
+  list-slots: [10,11,12,13,14,15,16,19,20,21,22,23,24,25,28,29,30,31,32,33,34,37,38,39,40,41,42,43]
+  back-command: "social"
+
+mdvsocial:
+  enabled: true
+  auto-install-main-button: true
+  main-menu-id: "main"
+  button-id: "misiones"
+  button-slot: 10
+  button-material: "COMPASS"
+  button-name: "&dMisiones"
+  button-lore:
+    - "&7Consulta tus encargos activos."
+    - "&7El progreso es automatico."
+    - "&eClick para abrir."
+
+anti-exploit:
+  placed-blocks:
+    enabled: true
+    # Solo registra materiales que aparecen en objetivos natural-only.
+    persist: true
+  pvp:
+    require-direct-killer: true
+    unique-victims-default: true
+    deny-same-ip: true
+    minimum-victim-playtime-minutes: 30
+    victim-repeat-cooldown-hours: 24
+    allowed-worlds: [world]
+    # Opcional. Si tienes PlaceholderAPI y un placeholder de ID de clan,
+    # puedes impedir contar miembros del mismo clan.
+    clan-id-placeholder: ""
+
+messages:
+  prefix: "&6&l[&5&lMDVCRAFT&6&l] &4» "
+  no-permission: "&cNo tienes permiso."
+  no-active-missions: "&7No hay misiones activas en este momento."
+  objective-completed: "&aObjetivo completado: &f%objective%"
+  mission-completed: "&a&lMision completada: &f%mission% &7Abre &f/misiones &7para reclamarla antes de que expire."
+  mission-claimed: "&aRecompensa reclamada: &f%mission%"
+  mission-expired: "&cLa mision ya expiro. La recompensa se perdio."
+  already-claimed: "&cYa reclamaste esta recompensa."
+  not-completed: "&cTodavia no completaste todos los objetivos."
+  delivery-none: "&cNo tienes objetos validos para entregar."
+  delivery-progress: "&aEntregaste &f%amount%&a. Progreso: &f%progress%/%required%"
+  reload: "&aMDVQuest recargado."
+  forced-rotation: "&aRotacion regenerada: &f%rotation%"

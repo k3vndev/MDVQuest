@@ -1,0 +1,201 @@
+# ==========================================================
+# EJEMPLOS. Puedes dividir las misiones en cuantos YAML quieras.
+# Una mision puede tener uno o varios objetivos.
+# ==========================================================
+missions:
+  caza_diaria:
+    enabled: true
+    rotation: daily
+    weight: 10
+    name: "&cCaceria cotidiana"
+    icon: IRON_SWORD
+    lore:
+      - "&7Reduce las amenazas comunes."
+    objectives:
+      muertos:
+        type: KILL_VANILLA_MOB
+        targets: [ZOMBIE, SKELETON, SPIDER]
+        amount: 15
+        name: "Mata criaturas hostiles"
+    rewards:
+      commands:
+        - "eco give %player% 150"
+        - "mmocore admin exp give %player% main 100 false"
+
+  mineria_diaria:
+    enabled: true
+    rotation: daily
+    weight: 10
+    name: "&bTurno de mineria"
+    icon: IRON_PICKAXE
+    objectives:
+      mineral:
+        type: MINE_BLOCK
+        targets: [COAL_ORE, DEEPSLATE_COAL_ORE, IRON_ORE, DEEPSLATE_IRON_ORE]
+        amount: 24
+        natural-only: true
+        name: "Mina minerales vanilla"
+    rewards:
+      commands:
+        - "eco give %player% 175"
+
+  lenador_diario:
+    enabled: true
+    rotation: daily
+    weight: 8
+    name: "&6Madera para el asentamiento"
+    icon: IRON_AXE
+    objectives:
+      troncos:
+        type: CUT_LOG
+        amount: 32
+        natural-only: false
+        name: "Corta troncos"
+    rewards:
+      commands:
+        - "eco give %player% 150"
+
+  agricultor_diario:
+    enabled: true
+    rotation: daily
+    weight: 8
+    name: "&aCosecha abundante"
+    icon: WHEAT
+    objectives:
+      cosecha:
+        type: HARVEST_CROP
+        targets: [WHEAT, CARROTS, POTATOES, BEETROOTS, NETHER_WART]
+        amount: 32
+        mature-only: true
+        name: "Cosecha cultivos maduros"
+    rewards:
+      commands:
+        - "eco give %player% 150"
+
+  crafteo_materiales:
+    enabled: false
+    rotation: two-days
+    weight: 10
+    name: "&dAbastecimiento del forjador"
+    icon: CRAFTING_TABLE
+    objectives:
+      materiales:
+        type: CRAFT_CATEGORY
+        category: MATERIALES
+        amount: 8
+        count-produced-items: true
+        name: "Craftea materiales con MDVRecetas"
+    rewards:
+      commands:
+        - "eco give %player% 500"
+
+  receta_concreta:
+    enabled: false
+    rotation: daily
+    name: "&ePedido especial"
+    icon: ANVIL
+    objectives:
+      receta:
+        type: CRAFT_RECIPE
+        recipe: NUCLEO_GELIDO_PULIDO
+        amount: 3
+        name: "Fabrica Nucleo Gelido Pulido"
+    rewards:
+      commands:
+        - "eco give %player% 300"
+
+  veta_custom:
+    enabled: false
+    rotation: two-days
+    name: "&aCristales de la profundidad"
+    icon: AMETHYST_SHARD
+    objectives:
+      vetas:
+        type: BREAK_CUSTOM_ORE
+        targets: [VIRIDITA]
+        amount: 12
+        name: "Extrae vetas de Viridita"
+    rewards:
+      commands:
+        - "eco give %player% 450"
+
+  familia_mythic:
+    enabled: false
+    rotation: four-days
+    name: "&5La Hueste Insepulta"
+    icon: WITHER_SKELETON_SKULL
+    objectives:
+      hueste:
+        type: KILL_MOB_FAMILY
+        family: HUESTE_INSEPULTA
+        amount: 50
+        name: "Derrota miembros de la Hueste"
+      miniboss:
+        type: KILL_MINIBOSS
+        family: HUESTE_INSEPULTA
+        amount: 2
+        name: "Derrota minibosses de la Hueste"
+    rewards:
+      commands:
+        - "eco give %player% 1200"
+
+  cazador_mythic:
+    enabled: false
+    rotation: daily
+    name: "&cObjetivo identificado"
+    icon: CROSSBOW
+    objectives:
+      mob:
+        type: KILL_MYTHIC_MOB
+        targets: [SAURIO_ACECHADOR]
+        amount: 12
+        name: "Mata Saurios Acechadores"
+    rewards:
+      commands:
+        - "eco give %player% 300"
+
+  entrega_mmoitem:
+    enabled: false
+    rotation: two-days
+    name: "&eEntrega de materiales"
+    icon: CHEST
+    objectives:
+      entrega:
+        type: DELIVER_MMOITEM
+        mmoitems-type: MATERIAL
+        mmoitems-id: ESCAMA_SAURIA
+        amount: 20
+        name: "Entrega Escamas Saurias"
+    rewards:
+      commands:
+        - "eco give %player% 600"
+
+  pvp_semanal:
+    enabled: false
+    rotation: weekly
+    name: "&4Rivales dignos"
+    icon: DIAMOND_SWORD
+    objectives:
+      jugadores:
+        type: PLAYER_KILL
+        amount: 3
+        unique-victims: true
+        name: "Derrota jugadores diferentes"
+    rewards:
+      commands:
+        - "eco give %player% 1500"
+
+  evento_puente:
+    enabled: false
+    rotation: weekly
+    name: "&cDefensor del mundo"
+    icon: NETHER_STAR
+    objectives:
+      evento:
+        type: COMPLETE_EVENT
+        event: ECLIPSE_LUNAR
+        amount: 1
+        name: "Completa el Eclipse Lunar"
+    rewards:
+      commands:
+        - "eco give %player% 1000"
