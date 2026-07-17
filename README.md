@@ -1,8 +1,8 @@
-# MDVQuest 1.1.0
+# MDVQuest 1.1.1
 
 MDVQuest crea misiones individuales con rotaciones globales: durante cada ciclo todos los jugadores reciben las mismas misiones, pero el progreso y la reclamación pertenecen a cada jugador.
 
-## Novedades de 1.1.0
+## Novedades de 1.1.1
 
 - Editor visual completo: `/mdvquest crear`.
 - Catálogo administrativo: `/mdvquest admin`.
@@ -10,13 +10,14 @@ MDVQuest crea misiones individuales con rotaciones globales: durante cada ciclo 
 - Selector de duración de 1 a 7 días reales.
 - Nombre, lore, icono exacto, peso, estado y archivo YAML editables in-game.
 - Catálogo guiado de todos los objetivos de V1.
-- Hasta 9 objetivos por misión, incluidos varios del mismo tipo.
+- Hasta 7 objetivos por misión por defecto, incluidos varios del mismo tipo.
 - Recompensas físicas configurables depositando los objetos en una GUI.
 - Identificación automática de objetos vanilla, MMOItems y MythicMobs/Crucible.
 - Recompensas estructuradas de experiencia principal o profesiones MMOCore.
 - Reclamación segura: calcula los stacks completos y exige slots vacíos antes de registrar el premio.
-- Rediseño de los menús públicos por grupos de duración.
-- Detalle visual con objetivos, objetos y experiencia; recompensas paginadas.
+- Menú principal sin reloj ni botón de cerrar: volver en slot 49 y flechas extremas solo cuando hacen falta.
+- Los libros muestran completadas/total y el tiempo hasta la próxima actualización del grupo.
+- Detalle visual con objetivos 10–16, recompensas 29–33, marco verde y paginación independiente.
 - `KILL_ANY_HOSTILE_MOB` para contar monstruos vanilla y MythicMobs.
 
 ## Flujo público
@@ -37,7 +38,17 @@ El menú principal agrupa las misiones en:
 - 4 a 6 días.
 - 7 días.
 
-Las flechas solo aparecen cuando la categoría o las recompensas necesitan otra página. Los iconos ocultan los atributos y tooltips vanilla innecesarios. MDVSocial continúa como `softdepend`: si está instalado, MDVQuest reutiliza sus inventarios, botones y sonidos; si no lo está, mantiene una GUI de respaldo.
+Las flechas solo aparecen cuando la categoría o las recompensas necesitan otra página. La cabeza central inferior vuelve a `/social` desde el catálogo y a la página exacta anterior desde el detalle. Todos los slots, materiales, títulos, nombres, lore y paneles de estos dos menús se editan en `config.yml`. Los iconos ocultan atributos y tooltips vanilla innecesarios. MDVSocial continúa como `softdepend`: si está instalado, MDVQuest reutiliza sus inventarios, botones y sonidos; si no lo está, mantiene una GUI de respaldo.
+
+## Nombres visibles de recompensas
+
+- Los materiales vanilla se insertan como componentes traducibles, por lo que el cliente los muestra en su idioma (por ejemplo, español).
+- MMOItems y MythicMobs/Crucible se construyen para leer su nombre efectivo real, no su ID interno.
+- Los nombres de nivel principal y profesiones se personalizan en `rewards.profession-display-names`.
+
+## Recompensas de ejemplo seguras
+
+`missions/examples.yml` no entrega dinero: usa EXP principal baja y lingotes de hierro. En una actualización desde una copia vieja, `safety.sanitize-example-economy-rewards: true` migra únicamente ese archivo una vez; no toca tus otros YAML.
 
 ## Reclamación segura
 
@@ -113,13 +124,13 @@ Requiere Java 21. El proyecto usa `paper-api:1.21.6-R0.1-SNAPSHOT` como dependen
 
 ```bash
 mvn -B -U clean package
-bash scripts/verify-bytecode.sh target/MDVQuest-1.1.0.jar
+bash scripts/verify-bytecode.sh target/MDVQuest-1.1.1.jar
 ```
 
 El resultado queda en:
 
 ```text
-target/MDVQuest-1.1.0.jar
+target/MDVQuest-1.1.1.jar
 ```
 
 GitHub Actions ejecuta ambos pasos y publica el JAR como artefacto. Consulta `BUILD-GITHUB.md` y prueba primero en staging con `TEST-CHECKLIST.md`.
@@ -129,5 +140,6 @@ GitHub Actions ejecuta ambos pasos y publica el JAR como artefacto. Consulta `BU
 - Reemplaza únicamente el JAR con el servidor apagado.
 - Conserva `plugins/MDVQuest/`, sus YAML y `mdvquest.db`.
 - Las misiones y recompensas antiguas por comandos continúan funcionando.
-- Las nuevas claves tienen valores de respaldo, por lo que no es obligatorio borrar `config.yml`.
-- Para copiar las nuevas secciones comentadas, compáralo con `src/main/resources/config.yml`.
+- Las nuevas claves se fusionan con `config.yml`; no borres tu configuración ni SQLite.
+- El saneamiento opcional afecta únicamente a `missions/examples.yml`.
+- Revisa `menus.main` y `menus.detail` para personalizar completamente la distribución.

@@ -1,90 +1,107 @@
 # ==========================================================
-# EJEMPLOS. Puedes dividir las misiones en cuantos YAML quieras.
-# Una mision puede tener uno o varios objetivos.
+# EJEMPLOS SEGUROS DE PRUEBA. Sin dinero ni comandos de economía.
+# El menú genera automáticamente el lore visible de EXP e ítems.
+# Puedes dividir las misiones en cuantos YAML quieras.
 # ==========================================================
+mdvquest-safe-rewards-version: 1
 missions:
   caza_diaria:
     enabled: true
     rotation: daily
     weight: 10
-    name: "&cCaceria cotidiana"
+    name: '&cCaceria cotidiana'
     icon: IRON_SWORD
     lore:
-      - "&7Reduce las amenazas comunes."
+    - '&7Reduce las amenazas comunes.'
     objectives:
       muertos:
         type: KILL_VANILLA_MOB
-        targets: [ZOMBIE, SKELETON, SPIDER]
+        targets:
+        - ZOMBIE
+        - SKELETON
+        - SPIDER
         amount: 15
-        name: "Mata criaturas hostiles"
+        name: Mata criaturas hostiles
     rewards:
-      lore:
-        - "&7• &e150 monedas"
-        - "&7• &b100 EXP principal"
       experience:
-        - profession: main
-          amount: 100
+      - profession: main
+        amount: 25
       vanilla-items:
-        - material: COOKED_BEEF
-          amount: 2
-      commands:
-        - "eco give %player% 150"
-
+      - material: IRON_INGOT
+        amount: 1
   mineria_diaria:
     enabled: true
     rotation: daily
     weight: 10
-    name: "&bTurno de mineria"
+    name: '&bTurno de mineria'
     icon: IRON_PICKAXE
     objectives:
       mineral:
         type: MINE_BLOCK
-        targets: [COAL_ORE, DEEPSLATE_COAL_ORE, IRON_ORE, DEEPSLATE_IRON_ORE]
+        targets:
+        - COAL_ORE
+        - DEEPSLATE_COAL_ORE
+        - IRON_ORE
+        - DEEPSLATE_IRON_ORE
         amount: 24
         natural-only: true
-        name: "Mina minerales vanilla"
+        name: Mina minerales vanilla
     rewards:
-      commands:
-        - "eco give %player% 175"
-
+      experience:
+      - profession: main
+        amount: 25
+      vanilla-items:
+      - material: IRON_INGOT
+        amount: 1
   lenador_diario:
     enabled: true
     rotation: daily
     weight: 8
-    name: "&6Madera para el asentamiento"
+    name: '&6Madera para el asentamiento'
     icon: IRON_AXE
     objectives:
       troncos:
         type: CUT_LOG
         amount: 32
         natural-only: false
-        name: "Corta troncos"
+        name: Corta troncos
     rewards:
-      commands:
-        - "eco give %player% 150"
-
+      experience:
+      - profession: main
+        amount: 25
+      vanilla-items:
+      - material: IRON_INGOT
+        amount: 1
   agricultor_diario:
     enabled: true
     rotation: daily
     weight: 8
-    name: "&aCosecha abundante"
+    name: '&aCosecha abundante'
     icon: WHEAT
     objectives:
       cosecha:
         type: HARVEST_CROP
-        targets: [WHEAT, CARROTS, POTATOES, BEETROOTS, NETHER_WART]
+        targets:
+        - WHEAT
+        - CARROTS
+        - POTATOES
+        - BEETROOTS
+        - NETHER_WART
         amount: 32
         mature-only: true
-        name: "Cosecha cultivos maduros"
+        name: Cosecha cultivos maduros
     rewards:
-      commands:
-        - "eco give %player% 150"
-
+      experience:
+      - profession: main
+        amount: 25
+      vanilla-items:
+      - material: IRON_INGOT
+        amount: 1
   crafteo_materiales:
     enabled: false
     rotation: two-days
     weight: 10
-    name: "&dAbastecimiento del forjador"
+    name: '&dAbastecimiento del forjador'
     icon: CRAFTING_TABLE
     objectives:
       materiales:
@@ -92,81 +109,98 @@ missions:
         category: MATERIALES
         amount: 8
         count-produced-items: true
-        name: "Craftea materiales con MDVRecetas"
+        name: Craftea materiales con MDVRecetas
     rewards:
-      commands:
-        - "eco give %player% 500"
-
+      experience:
+      - profession: main
+        amount: 40
+      vanilla-items:
+      - material: IRON_INGOT
+        amount: 2
   receta_concreta:
     enabled: false
     rotation: daily
-    name: "&ePedido especial"
+    name: '&ePedido especial'
     icon: ANVIL
     objectives:
       receta:
         type: CRAFT_RECIPE
         recipe: NUCLEO_GELIDO_PULIDO
         amount: 3
-        name: "Fabrica Nucleo Gelido Pulido"
+        name: Fabrica Nucleo Gelido Pulido
     rewards:
-      commands:
-        - "eco give %player% 300"
-
+      experience:
+      - profession: main
+        amount: 25
+      vanilla-items:
+      - material: IRON_INGOT
+        amount: 1
   veta_custom:
     enabled: false
     rotation: two-days
-    name: "&aCristales de la profundidad"
+    name: '&aCristales de la profundidad'
     icon: AMETHYST_SHARD
     objectives:
       vetas:
         type: BREAK_CUSTOM_ORE
-        targets: [VIRIDITA]
+        targets:
+        - VIRIDITA
         resource-kind: ORE
         amount: 12
-        name: "Extrae vetas de Viridita"
+        name: Extrae vetas de Viridita
     rewards:
-      commands:
-        - "eco give %player% 450"
-
+      experience:
+      - profession: main
+        amount: 40
+      vanilla-items:
+      - material: IRON_INGOT
+        amount: 2
   familia_mythic:
     enabled: false
     rotation: four-days
-    name: "&5La Hueste Insepulta"
+    name: '&5La Hueste Insepulta'
     icon: WITHER_SKELETON_SKULL
     objectives:
       hueste:
         type: KILL_MOB_FAMILY
         family: HUESTE_INSEPULTA
         amount: 50
-        name: "Derrota miembros de la Hueste"
+        name: Derrota miembros de la Hueste
       miniboss:
         type: KILL_MINIBOSS
         family: HUESTE_INSEPULTA
         amount: 2
-        name: "Derrota minibosses de la Hueste"
+        name: Derrota minibosses de la Hueste
     rewards:
-      commands:
-        - "eco give %player% 1200"
-
+      experience:
+      - profession: main
+        amount: 60
+      vanilla-items:
+      - material: IRON_INGOT
+        amount: 3
   cazador_mythic:
     enabled: false
     rotation: daily
-    name: "&cObjetivo identificado"
+    name: '&cObjetivo identificado'
     icon: CROSSBOW
     objectives:
       mob:
         type: KILL_MYTHIC_MOB
-        targets: [SAURIO_ACECHADOR]
+        targets:
+        - SAURIO_ACECHADOR
         amount: 12
-        name: "Mata Saurios Acechadores"
+        name: Mata Saurios Acechadores
     rewards:
-      commands:
-        - "eco give %player% 300"
-
+      experience:
+      - profession: main
+        amount: 25
+      vanilla-items:
+      - material: IRON_INGOT
+        amount: 1
   entrega_mmoitem:
     enabled: false
     rotation: two-days
-    name: "&eEntrega de materiales"
+    name: '&eEntrega de materiales'
     icon: CHEST
     objectives:
       entrega:
@@ -174,83 +208,87 @@ missions:
         mmoitems-type: MATERIAL
         mmoitems-id: ESCAMA_SAURIA
         amount: 20
-        name: "Entrega Escamas Saurias"
+        name: Entrega Escamas Saurias
     rewards:
-      commands:
-        - "eco give %player% 600"
-
+      experience:
+      - profession: main
+        amount: 40
+      vanilla-items:
+      - material: IRON_INGOT
+        amount: 2
   pvp_semanal:
     enabled: false
     rotation: weekly
-    name: "&4Rivales dignos"
+    name: '&4Rivales dignos'
     icon: DIAMOND_SWORD
     objectives:
       jugadores:
         type: PLAYER_KILL
         amount: 3
         unique-victims: true
-        name: "Derrota jugadores diferentes"
+        name: Derrota jugadores diferentes
     rewards:
-      commands:
-        - "eco give %player% 1500"
-
+      experience:
+      - profession: main
+        amount: 100
+      vanilla-items:
+      - material: IRON_INGOT
+        amount: 4
   evento_puente:
     enabled: false
     rotation: weekly
-    name: "&cDefensor del mundo"
+    name: '&cDefensor del mundo'
     icon: NETHER_STAR
     objectives:
       evento:
         type: COMPLETE_EVENT
         event: ECLIPSE_LUNAR
         amount: 1
-        name: "Completa el Eclipse Lunar"
+        name: Completa el Eclipse Lunar
     rewards:
-      commands:
-        - "eco give %player% 1000"
-
-
+      experience:
+      - profession: main
+        amount: 100
+      vanilla-items:
+      - material: IRON_INGOT
+        amount: 4
   hostiles_generales:
     enabled: false
     rotation: three-days
     weight: 10
-    name: "&4Amenazas de todo el mundo"
+    name: '&4Amenazas de todo el mundo'
     icon: NETHERITE_SWORD
     lore:
-      - "&7Elimina cualquier criatura hostil."
-      - "&7Cuenta monstruos vanilla y MythicMobs."
+    - '&7Elimina cualquier criatura hostil.'
+    - '&7Cuenta monstruos vanilla y MythicMobs.'
     objectives:
       hostiles:
         type: KILL_ANY_HOSTILE_MOB
         amount: 60
-        name: "Elimina criaturas hostiles"
+        name: Elimina criaturas hostiles
     rewards:
       experience:
-        - profession: main
-          amount: 500
-      mmoitems:
-        - type: MATERIAL
-          id: COFRE_SUMINISTROS
-          amount: 1
-      commands:
-        - "eco give %player% 750"
-
+      - profession: main
+        amount: 50
+      vanilla-items:
+      - material: IRON_INGOT
+        amount: 2
   recompensa_mythic_crucible:
     enabled: false
     rotation: weekly
     weight: 5
-    name: "&5Reliquia del desafío"
+    name: '&5Reliquia del desafío'
     icon: NETHER_STAR
     objectives:
       evento:
         type: COMPLETE_EVENT
         event: JEFE_MUNDIAL
         amount: 1
-        name: "Participa en el jefe mundial"
+        name: Participa en el jefe mundial
     rewards:
-      mythic-items:
-        - id: RECOMPENSA_CRUCIBLE
-          amount: 1
       experience:
-        - profession: main
-          amount: 1000
+      - profession: main
+        amount: 100
+      vanilla-items:
+      - material: IRON_INGOT
+        amount: 4

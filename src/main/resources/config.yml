@@ -1,5 +1,5 @@
 # ==========================================================
-# MDVQuest 1.1.0 - Misiones individuales globales + editor visual
+# MDVQuest 1.1.1 - Misiones individuales globales + editor visual
 # Los dias son dias REALES, no dias de Minecraft.
 # ==========================================================
 
@@ -79,11 +79,147 @@ rotations:
 menus:
   # Puede ser URL directa de textures.minecraft.net o Value Base64 de Minecraft-Heads.
   back-head-texture: ""
+  # Comando al volver desde el catálogo principal.
+  back-command: "social"
+
+  # Compatibilidad con configuraciones 1.0/1.1 antiguas.
   title: "&8Misiones"
   detail-title: "&8Mision: %mission%"
-  size: 54
-  list-slots: [10,11,12,13,14,15,16,19,20,21,22,23,24,25,28,29,30,31,32,33,34,37,38,39,40,41,42,43]
-  back-command: "social"
+
+  # Botones de paginación compartidos por ambos menús.
+  page-buttons:
+    previous:
+      material: ARROW
+      name: "&ePágina anterior"
+      lore:
+        - "&7Página actual: &f%page%/%pages%"
+    next:
+      material: ARROW
+      name: "&aPágina siguiente"
+      lore:
+        - "&7Página actual: &f%page%/%pages%"
+
+  main:
+    title: "&8Misiones"
+    size: 54
+    category-slots: [9, 18, 27, 36]
+    mission-slots: [10,11,12,13,14,15,16,17,19,20,21,22,23,24,25,26,28,29,30,31,32,33,34,35,37,38,39,40,41,42,43,44]
+    previous-page-slot: 45
+    back-slot: 49
+    next-page-slot: 53
+    selected-category-glow: true
+
+    back-button:
+      name: "&eVolver"
+      lore:
+        - "&7Regresa al menú de /social."
+
+    mission-state:
+      completed-material: LIME_WOOL
+      claimed-material: GRAY_DYE
+
+    # Textos del lore de cada misión en el catálogo principal.
+    mission-lore:
+      objectives-header: "&eObjetivos:"
+      objective-complete-state: "&a✔ "
+      objective-pending-state: "&7• "
+      objective-format: "%state%&f%objective% &7(%progress%/%required%)"
+      rewards-header: "&eRecompensas:"
+      experience-format: "&7• &b%amount% EXP &f%target%"
+      vanilla-item-prefix: "&7• &f%amount%x "
+      mmoitem-prefix: "&7• &d%amount%x "
+      mythic-item-prefix: "&7• &5%amount%x "
+      exact-item-prefix: "&7• &f%amount%x "
+      invalid-item-format: "&7• &f%amount%x %item%"
+      invalid-mmoitem-format: "&7• &d%amount%x %item%"
+      invalid-mythic-item-format: "&7• &5%amount%x %item%"
+      no-reward: "&7• Sin recompensa configurada"
+      expiration: "&7Expira en: &f%remaining%"
+      claimed: "&7Recompensa ya reclamada."
+      completed: "&a&lClick para recibir la recompensa."
+      details: "&eClick para ver más detalles."
+
+    categories:
+      one-day:
+        material: BOOK
+        name: "&eMisiones diarias"
+        lore:
+          - "&7Completadas: &f%completed%/%total%"
+          - "&7Nuevas misiones en: &f%remaining%"
+          - ""
+          - "&eClick para consultar."
+      two-three-days:
+        material: BOOK
+        name: "&eMisiones de 2 a 3 días"
+        lore:
+          - "&7Completadas: &f%completed%/%total%"
+          - "&7Más misiones en: &f%remaining%"
+          - ""
+          - "&eClick para consultar."
+      four-six-days:
+        material: BOOK
+        name: "&eMisiones de 4 a 6 días"
+        lore:
+          - "&7Completadas: &f%completed%/%total%"
+          - "&7Más misiones en: &f%remaining%"
+          - ""
+          - "&eClick para consultar."
+      seven-days:
+        material: BOOK
+        name: "&eMisiones semanales"
+        lore:
+          - "&7Completadas: &f%completed%/%total%"
+          - "&7Nuevas misiones en: &f%remaining%"
+          - ""
+          - "&eClick para consultar."
+
+  detail:
+    title: "&8Misión: %mission%"
+    size: 54
+    mission-icon-slot: 4
+    objective-slots: [10,11,12,13,14,15,16]
+    reward-slots: [29,30,31,32,33]
+    previous-reward-page-slot: 45
+    back-slot: 49
+    next-reward-page-slot: 53
+
+    back-button:
+      name: "&eVolver"
+      lore:
+        - "&7Regresa al catálogo anterior."
+
+    objective-state:
+      pending-material: PAPER
+      delivery-material: CHEST
+      completed-material: LIME_DYE
+
+    experience-icon: EXPERIENCE_BOTTLE
+    experience-name: "&bExperiencia"
+
+    objective-lore:
+      pending-name: "&e%objective%"
+      completed-name: "&a%objective%"
+      progress: "&7Progreso: &f%progress%&7/&f%required%"
+      delivery: "&eClick para entregar objetos."
+      completed: "&aObjetivo completado."
+
+    experience-lore:
+      - "&7Recibirás &f%amount% EXP"
+      - "&7Para: &f%target%"
+
+    reward-item-quantity: "&7Cantidad: &f%amount%"
+    empty-reward:
+      material: CHEST
+      name: "&eRecompensas"
+      lore:
+        - "&7Recompensa ejecutada por comandos."
+
+    reward-border:
+      enabled: true
+      material: LIME_STAINED_GLASS_PANE
+      name: " "
+      # Rectángulo alrededor de los slots 29 al 33.
+      slots: [19,20,21,22,23,24,25,28,34,37,38,39,40,41,42,43]
 
 mdvsocial:
   enabled: true
@@ -98,17 +234,29 @@ mdvsocial:
     - "&7El progreso es automatico."
     - "&eClick para abrir."
 
-
 rewards:
   # Se ejecuta desde consola para experiencia main y de profesiones.
   mmocore-experience-command: "mmocore admin exp give %player% %profession% %amount% false"
+  # Nombres visibles de la experiencia. Puedes añadir IDs de profesiones.
+  profession-display-names:
+    main: "Nivel principal"
+    mining: "Minería"
+    woodcutting: "Leñador"
+    farming: "Agricultura"
+    fishing: "Pesca"
+    hunting: "Cazador"
+
+safety:
+  # Solo modifica missions/examples.yml una vez y reemplaza sus recompensas
+  # por EXP principal baja + hierro. No toca tus otros YAML.
+  sanitize-example-economy-rewards: true
 
 editor:
   # El editor se abre con /mdvquest admin o /mdvquest crear.
   # Las respuestas guiadas se escriben en chat; "cancelar" vuelve sin aplicar el paso.
   enabled: true
-  # El menú de detalle reserva una fila completa para los objetivos.
-  max-objectives-per-mission: 9
+  # Coincide con los siete slots 10 al 16 del menú público de detalle.
+  max-objectives-per-mission: 7
 
 anti-exploit:
   placed-blocks:

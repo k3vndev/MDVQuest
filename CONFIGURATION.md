@@ -1,4 +1,4 @@
-# Configuración de MDVQuest 1.1.0
+# Configuración de MDVQuest 1.1.1
 
 Las misiones se leen desde todos los archivos `.yml` ubicados en:
 
@@ -61,8 +61,6 @@ missions:
       mythic-items:
         - id: RECOMPENSA_CRUCIBLE
           amount: 1
-      commands:
-        - 'eco give %player% 1200'
 ```
 
 ## Campos de misión
@@ -77,7 +75,7 @@ missions:
 - `objectives`: uno o varios objetivos. Todos deben completarse.
 - `rewards`: recompensas manualmente reclamables.
 
-El editor limita a 9 objetivos por misión por defecto, ya que el menú de detalle reserva una fila completa. Se cambia con `editor.max-objectives-per-mission`.
+El editor limita a 7 objetivos por misión por defecto, correspondientes a los slots 10–16. Se cambia con `editor.max-objectives-per-mission`, pero nunca supera la cantidad configurada en `menus.detail.objective-slots`.
 
 ## Objetivos
 
@@ -344,7 +342,6 @@ El editor identifica el ID a partir del objeto depositado y el reclamo vuelve a 
 
 ```yaml
 commands:
-  - 'eco give %player% 500'
   - 'say %player% completó %mission%'
 ```
 
@@ -381,4 +378,63 @@ Acepta una URL de `textures.minecraft.net` o un Value Base64 que contenga esa UR
 
 ## Compatibilidad con configuraciones 1.0.x
 
-Las recompensas antiguas con `commands`, `vanilla-items` y `mmoitems` siguen siendo válidas. No hace falta convertirlas para arrancar 1.1.0.
+Las recompensas antiguas con `commands`, `vanilla-items` y `mmoitems` siguen siendo válidas. No hace falta convertirlas para arrancar 1.1.1.
+
+
+## Personalización de los menús públicos
+
+La distribución completa está en `config.yml`. Los slots usan numeración Bukkit de `0` a `53`.
+
+### Catálogo principal
+
+```yaml
+menus:
+  main:
+    category-slots: [9, 18, 27, 36]
+    mission-slots: [10,11,12,13,14,15,16,17,19,20,21,22,23,24,25,26,28,29,30,31,32,33,34,35,37,38,39,40,41,42,43,44]
+    previous-page-slot: 45
+    back-slot: 49
+    next-page-slot: 53
+```
+
+Los placeholders de los libros son `%completed%`, `%total%` y `%remaining%`. Para 2–3 y 4–6 días, `%remaining%` usa la rotación que vaya a actualizarse primero.
+
+### Detalle de misión
+
+```yaml
+menus:
+  detail:
+    mission-icon-slot: 4
+    objective-slots: [10,11,12,13,14,15,16]
+    reward-slots: [29,30,31,32,33]
+    previous-reward-page-slot: 45
+    back-slot: 49
+    next-reward-page-slot: 53
+    reward-border:
+      enabled: true
+      material: LIME_STAINED_GLASS_PANE
+      slots: [19,20,21,22,23,24,25,28,34,37,38,39,40,41,42,43]
+```
+
+Las flechas no se colocan cuando solo existe una página. El botón de cerrar fue eliminado; el jugador puede cerrar con la tecla normal de inventario.
+
+## Nombres de objetos y profesiones
+
+Los objetos vanilla usan su componente traducible del cliente. Los objetos MMOItems y MythicMobs/Crucible muestran el nombre efectivo del objeto construido. Para experiencia de MMOCore:
+
+```yaml
+rewards:
+  profession-display-names:
+    main: "Nivel principal"
+    mining: "Minería"
+    woodcutting: "Leñador"
+```
+
+## Seguridad de los ejemplos
+
+```yaml
+safety:
+  sanitize-example-economy-rewards: true
+```
+
+Esta migración se ejecuta una vez sobre `missions/examples.yml`, reemplazando sus recompensas por EXP principal baja y hierro. No modifica otros archivos. Desactívala antes del primer arranque de 1.1.1 si reutilizas `examples.yml` como archivo de producción y no quieres que sea saneado.

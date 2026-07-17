@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.1.1
+
+- Eliminados el reloj de página y el botón de cerrar del menú público principal.
+- La cabeza de volver ahora ocupa el slot 49 y ejecuta el comando configurado, por defecto `/social`.
+- Flechas de página en los extremos inferiores; solo aparecen cuando existen más páginas y muestran `página/páginas`.
+- Los libros de duración muestran progreso completado/total y el tiempo hasta la próxima rotación del grupo.
+- Para grupos 2–3 y 4–6 días se calcula la rotación más próxima entre todas sus duraciones.
+- Rediseñado el detalle: objetivos en slots 10–16, recompensas en 29–33 y marco verde configurable.
+- Paginación independiente de recompensas en slots 45 y 53; volver en 49 restaura grupo y página anteriores.
+- Eliminado el botón de cerrar y el indicador extra de reclamación del detalle.
+- Todos los slots, materiales, nombres, lore, títulos y marco de ambos menús públicos son configurables.
+- Los nombres de objetos vanilla se muestran con componentes traducibles del cliente.
+- MMOItems y objetos MythicMobs/Crucible muestran el nombre efectivo configurado en el objeto real.
+- Añadidos nombres configurables para la experiencia principal y profesiones MMOCore.
+- Las recompensas de ejemplo quedaron limitadas a poca EXP principal y lingotes de hierro, sin dinero.
+- Migración opcional y de una sola vez para sanear `missions/examples.yml` antiguo sin tocar otros YAML.
+- El editor limita por defecto a siete objetivos para coincidir con los slots 10–16.
+
 ## 1.1.0
 
 - Añadido editor visual completo de misiones con selector de 1 a 7 días reales.
@@ -18,14 +36,13 @@
 - Reserva de slots; cualquier objeto intruso colocado durante la entrega se expulsa y no reemplaza la recompensa.
 - Bloqueo por jugador para impedir reclamaciones simultáneas en carrera.
 - Rediseñado el menú público en categorías 1 día, 2–3 días, 4–6 días y 7 días.
-- Añadido menú de detalle con objetivos, experiencia y hasta 10 recompensas visibles por página.
+- Añadido menú de detalle con objetivos, experiencia y recompensas paginadas.
 - Las flechas aparecen únicamente cuando son necesarias.
 - La misión completada sin reclamar usa lana verde; la reclamada usa tinte gris.
 - Iconos y herramientas del menú ocultan atributos y tooltips vanilla.
 - Añadida cabeza custom configurable para volver.
 - Escrituras YAML atómicas y soporte para mover/renombrar misiones entre archivos.
 - Se conserva compatibilidad con YAML y SQLite de 1.0.x.
-- Ampliada la verificación de bytecode a las nuevas GUI, RewardService e ItemUtil.
 
 ## 1.0.3
 

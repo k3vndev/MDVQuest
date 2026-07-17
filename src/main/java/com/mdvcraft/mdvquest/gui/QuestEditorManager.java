@@ -281,8 +281,8 @@ public final class QuestEditorManager implements Listener {
         List<RewardDefinition.ExperienceReward> experience = draft.rewards().experience();
         for (int i = 0; i < experience.size() && i < slots.length; i++) {
             RewardDefinition.ExperienceReward reward = experience.get(i);
-            inventory.setItem(slots[i], item(Material.EXPERIENCE_BOTTLE, "&b" + reward.profession(),
-                    List.of("&7Cantidad: &f" + reward.amount(), "", "&eClick izquierdo: editar cantidad", "&cClick derecho: eliminar"),
+            inventory.setItem(slots[i], item(Material.EXPERIENCE_BOTTLE, "&b" + professionDisplay(reward.profession()),
+                    List.of("&7Cantidad: &f" + reward.amount(), "&7Destino: &f" + professionDisplay(reward.profession()), "", "&eClick izquierdo: editar cantidad", "&cClick derecho: eliminar"),
                     "XP_ENTRY", i, 1, null, null, null));
         }
         inventory.setItem(45, backHead("EDITOR", "&eVolver", List.of("&7Regresa al editor.")));
@@ -519,7 +519,9 @@ public final class QuestEditorManager implements Listener {
     private void startObjectiveWizard(Player player, ObjectiveType type, int editIndex) {
         if (type == null || type == ObjectiveType.CLAN_KILL) { openObjectiveCatalog(player, 1); return; }
         QuestDraft draft = draft(player);
-        int maxObjectives = Math.max(1, plugin.getConfig().getInt("editor.max-objectives-per-mission", 9));
+        int configuredMax = Math.max(1, plugin.getConfig().getInt("editor.max-objectives-per-mission", 7));
+        int visualMax = plugin.getConfig().getIntegerList("menus.detail.objective-slots").size();
+        int maxObjectives = visualMax <= 0 ? configuredMax : Math.min(configuredMax, visualMax);
         if (editIndex < 0 && draft.objectives().size() >= maxObjectives) {
             player.sendMessage(plugin.prefix() + "§cEsta versión admite hasta §f" + maxObjectives + " §cobjetivos por misión para que todos entren en el menú de detalles.");
             plugin.getSocialHook().sound(player, "error");
@@ -832,7 +834,7 @@ public final class QuestEditorManager implements Listener {
     private List<String> experienceSummary(RewardDefinition reward) {
         List<String> lore = new ArrayList<>();
         if (reward.experience().isEmpty()) lore.add("&7Sin experiencia configurada.");
-        for (RewardDefinition.ExperienceReward exp : reward.experience()) lore.add("&7• &b" + exp.amount() + " EXP &f" + exp.profession());
+        for (RewardDefinition.ExperienceReward exp : reward.experience()) lore.add("&7• &b" + exp.amount() + " EXP &f" + professionDisplay(exp.profession()));
         lore.add(""); lore.add("&eClick para editar.");
         return lore;
     }
@@ -843,6 +845,22 @@ public final class QuestEditorManager implements Listener {
         else reward.commands().stream().limit(5).forEach(command -> lore.add("&7• &f" + command));
         lore.add(""); lore.add("&eClick para editar.");
         return lore;
+    }
+
+    private String professionDisplay(String id) {
+        String normalized = id == null || id.isBlank() ? "main" : id.trim();
+        String configured = plugin.getConfig().getString("rewards.profession-display-names." + normalized.toLowerCase(Locale.ROOT));
+        if (configured != null && !configured.isBlank()) return ColorUtil.strip(configured);
+        if (normalized.equalsIgnoreCase("main")) return "Nivel principal";
+        String[] parts = normalized.replace('-', '_').split("_+");
+        StringBuilder result = new StringBuilder();
+        for (String part : parts) {
+            if (part.isBlank()) continue;
+            if (!result.isEmpty()) result.append(' ');
+            result.append(Character.toUpperCase(part.charAt(0)));
+            if (part.length() > 1) result.append(part.substring(1).toLowerCase(Locale.ROOT));
+        }
+        return result.isEmpty() ? normalized : result.toString();
     }
 
     private String uniqueObjectiveId(QuestDraft draft, ObjectiveType type) {

@@ -11,6 +11,7 @@ import com.mdvcraft.mdvquest.hook.MythicItemsHook;
 import com.mdvcraft.mdvquest.hook.PlaceholderHook;
 import com.mdvcraft.mdvquest.listener.GameplayListener;
 import com.mdvcraft.mdvquest.service.DeliveryService;
+import com.mdvcraft.mdvquest.service.ExampleRewardSanitizer;
 import com.mdvcraft.mdvquest.service.IntegrationService;
 import com.mdvcraft.mdvquest.service.MDVSocialMenuInstaller;
 import com.mdvcraft.mdvquest.service.PlacedBlockService;
@@ -61,8 +62,10 @@ public final class MDVQuestPlugin extends JavaPlugin {
     public void onEnable() {
         saveDefaultConfig();
         getConfig().options().copyDefaults(true);
+        saveConfig();
         saveResourceIfMissing("families.yml");
         saveResourceIfMissing("missions/examples.yml");
+        new ExampleRewardSanitizer(this).run();
         databaseExecutor = Executors.newSingleThreadExecutor(runnable -> {
             Thread thread = new Thread(runnable, "MDVQuest-Database");
             thread.setDaemon(true);
@@ -145,6 +148,9 @@ public final class MDVQuestPlugin extends JavaPlugin {
     public void reloadPlugin() {
         progressService.flushAll();
         reloadConfig();
+        getConfig().options().copyDefaults(true);
+        saveConfig();
+        new ExampleRewardSanitizer(this).run();
         registry.reload();
         try {
             rotationService.initialize();

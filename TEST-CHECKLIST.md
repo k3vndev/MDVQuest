@@ -1,11 +1,11 @@
-# Checklist de staging — MDVQuest 1.1.0
+# Checklist de staging — MDVQuest 1.1.1
 
 Prueba esta versión en una copia de Purpur 1.21.6 antes de producción.
 
 ## Arranque y migración
 
 - [ ] El servidor inicia sin `NoSuchMethodError`.
-- [ ] `/mdvquest status` muestra versión 1.1.0.
+- [ ] `/mdvquest status` muestra versión 1.1.1.
 - [ ] Las misiones y el progreso existentes de 1.0.3 permanecen.
 - [ ] `/mdvquest` abre el menú público.
 - [ ] `/mdvquest admin` exige `mdvquest.admin`.
@@ -16,10 +16,10 @@ Prueba esta versión en una copia de Purpur 1.21.6 antes de producción.
 - [ ] Las flechas no aparecen cuando hay una sola página.
 - [ ] El lore muestra descripción, objetivos, recompensas y expiración.
 - [ ] Las herramientas no muestran daño, atributos o tooltip vanilla innecesario.
-- [ ] La cabeza de volver ejecuta el comando configurado.
-- [ ] El detalle muestra hasta 9 objetivos.
-- [ ] Las recompensas físicas y de EXP se ven correctamente.
-- [ ] La paginación de recompensas aparece solo con más de 10 entradas.
+- [ ] La cabeza de volver del catálogo ejecuta el comando configurado y la del detalle regresa a la página exacta anterior.
+- [ ] El detalle muestra hasta 7 objetivos en los slots 10 al 16.
+- [ ] Las recompensas físicas y de EXP se ven correctamente y con nombres visibles, no IDs internos.
+- [ ] La paginación de recompensas aparece solo con más de 5 entradas.
 
 ## Editor
 
