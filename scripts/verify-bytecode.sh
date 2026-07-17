@@ -1,9 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-JAR="${1:-target/MDVQuest-1.0.2.jar}"
+JAR="${1:-target/MDVQuest-1.0.3.jar}"
 if [[ ! -f "$JAR" ]]; then
   echo "No existe el JAR: $JAR" >&2
+  exit 1
+fi
+
+# El plugin nunca debe empaquetar copias/stubs de Bukkit o Paper.
+if jar tf "$JAR" | grep -Eq '^(org/bukkit|io/papermc/paper)/'; then
+  echo "El JAR contiene clases Bukkit/Paper empaquetadas. Revisa las dependencias y el shade." >&2
   exit 1
 fi
 
@@ -15,6 +21,7 @@ javap -classpath "$JAR" -verbose \
   com.mdvcraft.mdvquest.hook.MDVSocialHook \
   com.mdvcraft.mdvquest.listener.GameplayListener > "$DUMP"
 
+# Firmas que solo aparecen al compilar contra stubs incorrectos.
 forbidden=(
   'openInventory:(Lorg/bukkit/inventory/Inventory;)V'
   'setItemMeta:(Lorg/bukkit/inventory/meta/ItemMeta;)V'
@@ -22,6 +29,7 @@ forbidden=(
   'getWhoClicked:()Ljava/lang/Object;'
   'Projectile.getShooter:()Ljava/lang/Object;'
   'CraftItemEvent.getInventory:()Ljava/lang/Object;'
+  'CraftItemEvent.getInventory:()Lorg/bukkit/inventory/Inventory;'
 )
 
 for signature in "${forbidden[@]}"; do
@@ -31,13 +39,15 @@ for signature in "${forbidden[@]}"; do
   fi
 done
 
+# Firmas reales usadas por Paper/Purpur 1.21.6.
+# CraftItemEvent sobrescribe getInventory() con retorno covariante CraftingInventory.
 required=(
   'openInventory:(Lorg/bukkit/inventory/Inventory;)Lorg/bukkit/inventory/InventoryView;'
   'setItemMeta:(Lorg/bukkit/inventory/meta/ItemMeta;)Z'
   'InventoryCloseEvent.getPlayer:()Lorg/bukkit/entity/HumanEntity;'
   'getWhoClicked:()Lorg/bukkit/entity/HumanEntity;'
   'Projectile.getShooter:()Lorg/bukkit/projectiles/ProjectileSource;'
-  'CraftItemEvent.getInventory:()Lorg/bukkit/inventory/Inventory;'
+  'CraftItemEvent.getInventory:()Lorg/bukkit/inventory/CraftingInventory;'
 )
 
 for signature in "${required[@]}"; do
@@ -47,4 +57,4 @@ for signature in "${required[@]}"; do
   fi
 done
 
-echo "Bytecode verificado: las firmas Bukkit/Paper son correctas."
+echo "Bytecode verificado: firmas compatibles con Bukkit/Paper/Purpur 1.21.6."

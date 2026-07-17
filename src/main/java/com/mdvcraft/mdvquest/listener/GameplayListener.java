@@ -33,7 +33,6 @@ import org.bukkit.event.player.PlayerItemConsumeEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.CraftingInventory;
-import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.Recipe;
@@ -165,8 +164,7 @@ public final class GameplayListener implements Listener {
 
     private int estimateCraftOperations(CraftItemEvent event) {
         if (!event.isShiftClick()) return 1;
-        Inventory sourceInventory = event.getInventory();
-        if (!(sourceInventory instanceof CraftingInventory crafting)) return 1;
+        CraftingInventory crafting = event.getInventory();
         int min = Integer.MAX_VALUE;
         for (ItemStack item : crafting.getMatrix()) {
             if (item == null || item.getType().isAir()) continue;

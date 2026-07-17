@@ -1,4 +1,4 @@
-# MDVQuest 1.0.2
+# MDVQuest 1.0.3
 
 ## Compilacion oficial
 
@@ -6,12 +6,12 @@ Este repositorio debe compilarse con **Java 21** y la dependencia oficial de Pap
 
 ```bash
 mvn -B -U clean package
-bash scripts/verify-bytecode.sh target/MDVQuest-1.0.2.jar
+bash scripts/verify-bytecode.sh target/MDVQuest-1.0.3.jar
 ```
 
-El JAR final aparece en `target/MDVQuest-1.0.2.jar`. El workflow `.github/workflows/build.yml` hace estos mismos pasos en GitHub Actions y publica el JAR como artefacto.
+El JAR final aparece en `target/MDVQuest-1.0.3.jar`. El workflow `.github/workflows/build.yml` hace estos mismos pasos en GitHub Actions y publica el JAR como artefacto.
 
-MDVQuest 1.0.2 implementa misiones individuales de rotación global: durante un ciclo todos los jugadores reciben las mismas misiones, pero cada uno conserva su propio progreso y reclamación.
+MDVQuest 1.0.3 implementa misiones individuales de rotación global: durante un ciclo todos los jugadores reciben las mismas misiones, pero cada uno conserva su propio progreso y reclamación.
 
 ## Comportamiento principal
 
