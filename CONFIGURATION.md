@@ -1,4 +1,4 @@
-# Configuración de MDVQuest 1.1.1
+# Configuración de MDVQuest 1.2.0
 
 Las misiones se leen desde todos los archivos `.yml` ubicados en:
 
@@ -347,25 +347,99 @@ commands:
 
 Placeholders propios: `%player%`, `%uuid%`, `%mission%` y `%rotation%`.
 
-## Rotaciones reales
+## Rotaciones reales y pools de acceso
+
+Cada duración genera hasta tres selecciones globales. La cantidad se elige una sola vez por ciclo entre el mínimo y el máximo y permanece estable tras reinicios y `/mdvquest reload`.
 
 ```yaml
 rotations:
-  three-days:
+  daily:
     enabled: true
-    duration-days: 3
-    mission-count: 2
+    duration-days: 1
+    pools:
+      normal:
+        min-missions: 5
+        max-missions: 8
+      vip1:
+        min-missions: 2
+        max-missions: 5
+      vip2:
+        min-missions: 1
+        max-missions: 4
     anchor-date: '2026-01-01'
     reset-time: '00:00'
-    seed: 'mdvquest-three-days'
+    seed: 'mdvquest-daily'
 ```
 
-- `duration-days`: de 1 a 7 en V1.
-- `mission-count`: cuántas definiciones globales se seleccionan en cada ciclo.
-- `anchor-date` y `reset-time`: fijan los límites de los ciclos en la zona horaria configurada.
-- `seed`: hace que la selección sea estable tras reinicios.
+Reglas de selección:
 
-Si hay menos candidatas habilitadas que `mission-count`, se usan todas.
+- `normal`: solo definiciones con `access-pool: normal`.
+- `vip1`: definiciones normales que no salieron antes + definiciones `vip1`.
+- `vip2`: definiciones `vip1` que no salieron antes + definiciones `vip2`.
+- No existen porcentajes 60/40 ni pesos por origen del pool.
+- La misma definición no se repite entre pools en el mismo ciclo.
+- El campo individual `weight` de cada misión sigue controlando su probabilidad relativa frente a las demás candidatas disponibles. Con el mismo peso, todas tienen la misma posibilidad.
+- Si faltan candidatas, se seleccionan todas las disponibles y se informa en consola.
+
+`duration-days` admite de 1 a 7 en V1. `anchor-date` y `reset-time` fijan los límites de los ciclos en la zona horaria configurada. `seed` hace estable la selección normal tras reinicios.
+
+Las configuraciones antiguas que todavía tengan `mission-count` continúan funcionando como un único pool normal fijo; para activar cantidades variables y VIP conviene migrarlas al bloque `pools`.
+
+### Acceso de cada definición
+
+Dentro de una misión:
+
+```yaml
+missions:
+  cazador_legendario:
+    enabled: true
+    rotation: daily
+    access-pool: vip1
+    weight: 10
+```
+
+Valores:
+
+- `normal`: puede salir en el pool normal o como extra VIP1.
+- `vip1`: puede salir en el pool VIP1 o como extra VIP2.
+- `vip2`: solo puede salir en el pool VIP2.
+
+El pool de la **instancia seleccionada** determina el permiso de reclamación. Por ejemplo, una definición normal elegida como extra VIP1 requiere el permiso VIP1 para reclamar esa instancia.
+
+```yaml
+access-tiers:
+  vip2-inherits-vip1: true
+  vip1:
+    display-name: 'VIP'
+    permission: 'mdvquest.access.vip1'
+    locked-material: LIGHT_BLUE_STAINED_GLASS_PANE
+  vip2:
+    display-name: 'VIP 2'
+    permission: 'mdvquest.access.vip2'
+    locked-material: YELLOW_STAINED_GLASS_PANE
+```
+
+Todos pueden ver y progresar las instancias VIP. Sin el permiso correspondiente, el icono se reemplaza por el panel configurado y la recompensa no puede reclamarse. El aviso del lore se edita en:
+
+```yaml
+menus:
+  main:
+    access:
+      locked-line: '&b● Necesitas el rango &f%rank% &bpara reclamar la recompensa de esta misión.'
+```
+
+Placeholders: `%rank%`, `%permission%` y `%pool%`.
+
+### Reroll administrativo
+
+```text
+/mdvquest reroll daily confirmar
+/mdvquest reroll two-days confirmar
+/mdvquest reroll weekly confirmar
+/mdvquest reroll all confirmar
+```
+
+El reroll conserva el final temporal del ciclo, pero elimina las instancias actuales de la rotación afectada, su progreso y las recompensas completadas sin reclamar. Después vuelve a sortear la cantidad y las misiones de los tres pools. Requiere `mdvquest.admin.reroll`.
 
 ## Cabeza de volver
 
@@ -378,7 +452,7 @@ Acepta una URL de `textures.minecraft.net` o un Value Base64 que contenga esa UR
 
 ## Compatibilidad con configuraciones 1.0.x
 
-Las recompensas antiguas con `commands`, `vanilla-items` y `mmoitems` siguen siendo válidas. No hace falta convertirlas para arrancar 1.1.1.
+Las recompensas antiguas con `commands`, `vanilla-items` y `mmoitems` siguen siendo válidas. No hace falta convertirlas para arrancar 1.2.0.
 
 
 ## Personalización de los menús públicos
@@ -437,4 +511,4 @@ safety:
   sanitize-example-economy-rewards: true
 ```
 
-Esta migración se ejecuta una vez sobre `missions/examples.yml`, reemplazando sus recompensas por EXP principal baja y hierro. No modifica otros archivos. Desactívala antes del primer arranque de 1.1.1 si reutilizas `examples.yml` como archivo de producción y no quieres que sea saneado.
+Esta migración se ejecuta una vez sobre `missions/examples.yml`, reemplazando sus recompensas por EXP principal baja y hierro. No modifica otros archivos. Desactívala antes del primer arranque de 1.2.0 si reutilizas `examples.yml` como archivo de producción y no quieres que sea saneado.

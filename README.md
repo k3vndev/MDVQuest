@@ -1,14 +1,27 @@
-# MDVQuest 1.1.1
+# MDVQuest 1.2.0
 
 MDVQuest crea misiones individuales con rotaciones globales: durante cada ciclo todos los jugadores reciben las mismas misiones, pero el progreso y la reclamación pertenecen a cada jugador.
 
-## Novedades de 1.1.1
+## Novedades de 1.2.0
 
+- Cantidad variable de misiones por rotación: cada pool usa `min-missions` y `max-missions`.
+- Tres selecciones globales y estables por ciclo:
+  - `normal`: solo definiciones normales.
+  - `vip1`: definiciones normales restantes + definiciones VIP1.
+  - `vip2`: definiciones VIP1 restantes + definiciones VIP2.
+- No hay porcentajes por origen: todas las candidatas habilitadas dentro del pool participan juntas.
+- Una misma definición no puede repetirse entre los tres pools durante el mismo ciclo.
+- Todos los jugadores ven y progresan todas las misiones activas.
+- Las recompensas VIP solo se pueden reclamar con `mdvquest.access.vip1` o `mdvquest.access.vip2`.
+- Sin rango, las misiones VIP1 usan panel celeste y las VIP2 panel amarillo; el lore de bloqueo es editable.
+- El editor visual permite asignar cada definición como Normal, VIP1 o VIP2.
+- `/mdvquest reroll <rotación|all> confirmar` regenera selecciones con confirmación destructiva.
+- Migración automática de SQLite: conserva progreso existente y añade `access_pool`.
 - Editor visual completo: `/mdvquest crear`.
 - Catálogo administrativo: `/mdvquest admin`.
 - Edición de misiones existentes con clic derecho.
 - Selector de duración de 1 a 7 días reales.
-- Nombre, lore, icono exacto, peso, estado y archivo YAML editables in-game.
+- Nombre, lore, icono exacto, peso individual, estado y archivo YAML editables in-game.
 - Catálogo guiado de todos los objetivos de V1.
 - Hasta 7 objetivos por misión por defecto, incluidos varios del mismo tipo.
 - Recompensas físicas configurables depositando los objetos en una GUI.
@@ -113,7 +126,7 @@ El menú de recompensas devuelve al administrador todos los objetos depositados;
 - `/mdvquest admin`: catálogo administrativo.
 - `/mdvquest reload`: recarga configuraciones y misiones.
 - `/mdvquest status`: muestra instancias activas.
-- `/mdvquest rotate <rotación>`: fuerza una nueva selección global.
+- `/mdvquest reroll <rotación|all> confirmar`: regenera una rotación o todas y elimina su progreso/recompensas pendientes.
 - `/mdvquest event <jugador> <evento> [cantidad]`: puente para eventos externos.
 - `/mdvquest profexp <jugador> <profesión> <cantidad>`: puente de experiencia.
 - `/mdvquest report <jugador> <tipo> <objetivo> <cantidad>`: reporte administrativo genérico.
@@ -124,22 +137,24 @@ Requiere Java 21. El proyecto usa `paper-api:1.21.6-R0.1-SNAPSHOT` como dependen
 
 ```bash
 mvn -B -U clean package
-bash scripts/verify-bytecode.sh target/MDVQuest-1.1.1.jar
+bash scripts/verify-bytecode.sh target/MDVQuest-1.2.0.jar
 ```
 
 El resultado queda en:
 
 ```text
-target/MDVQuest-1.1.1.jar
+target/MDVQuest-1.2.0.jar
 ```
 
 GitHub Actions ejecuta ambos pasos y publica el JAR como artefacto. Consulta `BUILD-GITHUB.md` y prueba primero en staging con `TEST-CHECKLIST.md`.
 
-## Actualización desde 1.0.3
+## Actualización desde 1.1.1
 
 - Reemplaza únicamente el JAR con el servidor apagado.
 - Conserva `plugins/MDVQuest/`, sus YAML y `mdvquest.db`.
 - Las misiones y recompensas antiguas por comandos continúan funcionando.
 - Las nuevas claves se fusionan con `config.yml`; no borres tu configuración ni SQLite.
+- SQLite añade automáticamente `access_pool`; las instancias antiguas se consideran normales.
+- Al primer arranque se generan los pools VIP que falten para el ciclo actual, sin reemplazar las misiones normales existentes.
 - El saneamiento opcional afecta únicamente a `missions/examples.yml`.
 - Revisa `menus.main` y `menus.detail` para personalizar completamente la distribución.

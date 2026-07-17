@@ -1,6 +1,8 @@
 package com.mdvcraft.mdvquest.service;
 
 import com.mdvcraft.mdvquest.MDVQuestPlugin;
+import com.mdvcraft.mdvquest.model.AccessTier;
+import com.mdvcraft.mdvquest.model.MissionCountRange;
 import com.mdvcraft.mdvquest.model.MissionDefinition;
 import com.mdvcraft.mdvquest.model.MissionInstance;
 import com.mdvcraft.mdvquest.model.RotationDefinition;
@@ -15,23 +17,24 @@ import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Comparator;
+import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-import java.util.stream.Collectors;
 
+/** Genera y conserva las selecciones globales de cada rotación y pool. */
 public final class RotationService {
     private final MDVQuestPlugin plugin;
     private final QuestRegistry registry;
     private final QuestDatabase database;
     private final Map<String, MissionInstance> active = new LinkedHashMap<>();
     private final Map<String, String> currentCycleByRotation = new HashMap<>();
-    private final Set<String> emptyCycles = new java.util.HashSet<>();
+    private final Set<String> emptyPools = new HashSet<>();
 
     public RotationService(MDVQuestPlugin plugin, QuestRegistry registry, QuestDatabase database) {
         this.plugin = plugin;
@@ -42,7 +45,7 @@ public final class RotationService {
     public synchronized void initialize() throws SQLException {
         active.clear();
         currentCycleByRotation.clear();
-        emptyCycles.clear();
+        emptyPools.clear();
         long now = System.currentTimeMillis();
         for (QuestDatabase.StoredInstance stored : database.loadUnexpiredInstances(now)) {
             MissionDefinition definition = registry.mission(stored.definitionId());
@@ -50,7 +53,10 @@ public final class RotationService {
                 plugin.getLogger().warning("Instancia activa ignorada porque su definicion ya no existe: " + stored.id());
                 continue;
             }
-            MissionInstance instance = new MissionInstance(stored.id(), stored.cycleKey(), stored.rotationId(), definition, stored.startsAt(), stored.expiresAt());
+            MissionInstance instance = new MissionInstance(
+                    stored.id(), stored.cycleKey(), stored.rotationId(), stored.accessTier(), definition,
+                    stored.startsAt(), stored.expiresAt()
+            );
             if (instance.isActive(now)) active.put(instance.id(), instance);
         }
         refresh(now);
@@ -61,46 +67,41 @@ public final class RotationService {
         currentCycleByRotation.clear();
 
         for (RotationDefinition rotation : registry.rotations()) {
-            if (!rotation.enabled() || rotation.missionCount() <= 0) continue;
+            if (!rotation.enabled() || !rotation.hasAnyPoolEnabled()) continue;
             Window window = window(rotation, now);
             currentCycleByRotation.put(rotation.id(), window.cycleKey());
 
-            boolean hasInMemory = active.values().stream().anyMatch(i -> i.cycleKey().equals(window.cycleKey()));
-            if (hasInMemory || emptyCycles.contains(window.cycleKey())) continue;
-
-            List<MissionInstance> storedForCycle = loadCycleFromDatabase(window.cycleKey(), now);
-            if (!storedForCycle.isEmpty()) {
-                for (MissionInstance instance : storedForCycle) active.put(instance.id(), instance);
-                changed = true;
-                continue;
+            Set<String> selectedDefinitions = new HashSet<>();
+            for (MissionInstance instance : active.values()) {
+                if (instance.cycleKey().equals(window.cycleKey())) selectedDefinitions.add(instance.definition().id());
             }
 
-            List<MissionInstance> generated = generate(rotation, window, "");
-            if (generated.isEmpty()) {
-                emptyCycles.add(window.cycleKey());
-                continue;
-            }
-            database.insertInstances(generated);
-            for (MissionInstance instance : generated) active.put(instance.id(), instance);
-            if (!generated.isEmpty()) {
+            for (AccessTier tier : AccessTier.values()) {
+                MissionCountRange range = rotation.countRange(tier);
+                if (!range.enabled()) continue;
+                String poolKey = poolKey(window.cycleKey(), tier);
+                boolean alreadyGenerated = active.values().stream().anyMatch(instance ->
+                        instance.cycleKey().equals(window.cycleKey()) && instance.accessTier() == tier);
+                if (alreadyGenerated || emptyPools.contains(poolKey)) continue;
+
+                List<MissionInstance> generated = generatePool(rotation, window, tier, selectedDefinitions, "");
+                if (generated.isEmpty()) {
+                    emptyPools.add(poolKey);
+                    continue;
+                }
+                database.insertInstances(generated);
+                for (MissionInstance instance : generated) {
+                    active.put(instance.id(), instance);
+                    selectedDefinitions.add(instance.definition().id());
+                }
                 changed = true;
-                plugin.getLogger().info("Rotacion " + rotation.id() + " generada con " + generated.size() + " misiones globales.");
+                plugin.getLogger().info("Rotacion " + rotation.id() + " / " + tier.key()
+                        + " generada con " + generated.size() + " misiones globales.");
             }
         }
 
         if (changed) sortActive();
         return changed;
-    }
-
-    private List<MissionInstance> loadCycleFromDatabase(String cycleKey, long now) throws SQLException {
-        List<MissionInstance> result = new ArrayList<>();
-        for (QuestDatabase.StoredInstance stored : database.loadUnexpiredInstances(now)) {
-            if (!stored.cycleKey().equals(cycleKey)) continue;
-            MissionDefinition definition = registry.mission(stored.definitionId());
-            if (definition == null) continue;
-            result.add(new MissionInstance(stored.id(), stored.cycleKey(), stored.rotationId(), definition, stored.startsAt(), stored.expiresAt()));
-        }
-        return result;
     }
 
     public synchronized boolean forceRotate(String rotationId, long now) throws SQLException {
@@ -109,28 +110,57 @@ public final class RotationService {
         Window base = window(rotation, now);
         String previousCycle = currentCycleByRotation.getOrDefault(rotation.id(), base.cycleKey());
         database.deleteCycle(previousCycle);
-        active.values().removeIf(i -> i.rotationId().equals(rotation.id()));
-        emptyCycles.remove(previousCycle);
+        active.values().removeIf(instance -> instance.rotationId().equals(rotation.id()));
+        emptyPools.removeIf(key -> key.startsWith(previousCycle + "|"));
 
-        String suffix = "forced-" + now;
-        Window forced = new Window(base.startsAt(), base.expiresAt(), base.cycleKey());
-        List<MissionInstance> generated = generate(rotation, forced, suffix);
-        database.insertInstances(generated);
-        for (MissionInstance instance : generated) active.put(instance.id(), instance);
-        currentCycleByRotation.put(rotation.id(), forced.cycleKey());
+        String extraSeed = "reroll-" + now;
+        Set<String> selectedDefinitions = new HashSet<>();
+        List<MissionInstance> allGenerated = new ArrayList<>();
+        for (AccessTier tier : AccessTier.values()) {
+            if (!rotation.countRange(tier).enabled()) continue;
+            List<MissionInstance> generated = generatePool(rotation, base, tier, selectedDefinitions, extraSeed);
+            if (generated.isEmpty()) emptyPools.add(poolKey(base.cycleKey(), tier));
+            for (MissionInstance instance : generated) selectedDefinitions.add(instance.definition().id());
+            allGenerated.addAll(generated);
+        }
+
+        database.insertInstances(allGenerated);
+        for (MissionInstance instance : allGenerated) active.put(instance.id(), instance);
+        currentCycleByRotation.put(rotation.id(), base.cycleKey());
         sortActive();
         return true;
     }
 
-    private List<MissionInstance> generate(RotationDefinition rotation, Window window, String extraSeed) {
-        List<MissionDefinition> candidates = new ArrayList<>(registry.missionsForRotation(rotation.id()));
+    private List<MissionInstance> generatePool(RotationDefinition rotation, Window window, AccessTier generatedTier,
+                                               Set<String> excludedDefinitions, String extraSeed) {
+        Set<AccessTier> allowedDefinitionPools = switch (generatedTier) {
+            case NORMAL -> EnumSet.of(AccessTier.NORMAL);
+            case VIP1 -> EnumSet.of(AccessTier.NORMAL, AccessTier.VIP1);
+            case VIP2 -> EnumSet.of(AccessTier.VIP1, AccessTier.VIP2);
+        };
+
+        List<MissionDefinition> candidates = new ArrayList<>(
+                registry.missionsForRotation(rotation.id(), allowedDefinitionPools).stream()
+                        .filter(mission -> !excludedDefinitions.contains(mission.id()))
+                        .toList()
+        );
         if (candidates.isEmpty()) {
-            plugin.getLogger().warning("No hay misiones habilitadas para la rotacion '" + rotation.id() + "'.");
-            return Collections.emptyList();
+            plugin.getLogger().warning("No hay candidatas libres para la rotacion '" + rotation.id()
+                    + "' en el pool '" + generatedTier.key() + "'.");
+            return List.of();
         }
 
-        int count = Math.min(rotation.missionCount(), candidates.size());
-        Random random = new Random(stableSeed(rotation.seed() + ":" + window.cycleKey() + ":" + extraSeed));
+        MissionCountRange range = rotation.countRange(generatedTier);
+        Random random = new Random(stableSeed(rotation.seed() + ":" + window.cycleKey() + ":"
+                + generatedTier.key() + ":" + extraSeed));
+        int requested = range.min();
+        if (range.max() > range.min()) requested += random.nextInt(range.max() - range.min() + 1);
+        int count = Math.min(requested, candidates.size());
+        if (count < range.min()) {
+            plugin.getLogger().warning("El pool '" + generatedTier.key() + "' de '" + rotation.id()
+                    + "' pidio al menos " + range.min() + " misiones, pero solo hay " + candidates.size() + " candidatas libres.");
+        }
+
         List<MissionDefinition> selected = new ArrayList<>();
         for (int i = 0; i < count && !candidates.isEmpty(); i++) {
             int totalWeight = candidates.stream().mapToInt(MissionDefinition::weight).sum();
@@ -139,7 +169,10 @@ public final class RotationService {
             int cursor = 0;
             for (MissionDefinition candidate : candidates) {
                 cursor += candidate.weight();
-                if (roll < cursor) { picked = candidate; break; }
+                if (roll < cursor) {
+                    picked = candidate;
+                    break;
+                }
             }
             selected.add(picked);
             candidates.remove(picked);
@@ -147,10 +180,15 @@ public final class RotationService {
 
         List<MissionInstance> instances = new ArrayList<>();
         for (MissionDefinition definition : selected) {
-            String id = window.cycleKey() + ":" + definition.id();
-            instances.add(new MissionInstance(id, window.cycleKey(), rotation.id(), definition, window.startsAt(), window.expiresAt()));
+            String id = window.cycleKey() + ":" + generatedTier.key() + ":" + definition.id();
+            instances.add(new MissionInstance(id, window.cycleKey(), rotation.id(), generatedTier,
+                    definition, window.startsAt(), window.expiresAt()));
         }
         return instances;
+    }
+
+    private String poolKey(String cycleKey, AccessTier tier) {
+        return cycleKey + "|" + tier.key();
     }
 
     private long stableSeed(String value) {
@@ -164,7 +202,8 @@ public final class RotationService {
 
     public Window window(RotationDefinition rotation, long nowMillis) {
         ZonedDateTime now = ZonedDateTime.ofInstant(java.time.Instant.ofEpochMilli(nowMillis), registry.zoneId());
-        LocalDate effectiveDate = now.toLocalTime().isBefore(rotation.resetTime()) ? now.toLocalDate().minusDays(1) : now.toLocalDate();
+        LocalDate effectiveDate = now.toLocalTime().isBefore(rotation.resetTime())
+                ? now.toLocalDate().minusDays(1) : now.toLocalDate();
         long days = ChronoUnit.DAYS.between(rotation.anchorDate(), effectiveDate);
         long cycle = Math.floorDiv(days, rotation.durationDays());
         LocalDate startDate = rotation.anchorDate().plusDays(cycle * rotation.durationDays());
@@ -178,7 +217,9 @@ public final class RotationService {
 
     private void sortActive() {
         List<MissionInstance> sorted = active.values().stream()
-                .sorted(Comparator.comparingLong(MissionInstance::expiresAt).thenComparing(i -> i.definition().id()))
+                .sorted(Comparator.comparingLong(MissionInstance::expiresAt)
+                        .thenComparingInt(instance -> instance.accessTier().level())
+                        .thenComparing(instance -> instance.definition().id()))
                 .toList();
         active.clear();
         for (MissionInstance instance : sorted) active.put(instance.id(), instance);

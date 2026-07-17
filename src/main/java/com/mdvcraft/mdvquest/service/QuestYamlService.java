@@ -69,6 +69,7 @@ public final class QuestYamlService {
         yaml.set(base, null);
         yaml.set(base + ".enabled", draft.enabled());
         yaml.set(base + ".rotation", draft.rotation());
+        yaml.set(base + ".access-pool", draft.accessTier().key());
         yaml.set(base + ".weight", draft.weight());
         yaml.set(base + ".name", draft.name());
         yaml.set(base + ".icon", draft.icon().getType().name());

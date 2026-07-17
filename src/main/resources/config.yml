@@ -1,5 +1,5 @@
 # ==========================================================
-# MDVQuest 1.1.1 - Misiones individuales globales + editor visual
+# MDVQuest 1.2.0 - Misiones individuales globales + editor visual
 # Los dias son dias REALES, no dias de Minecraft.
 # ==========================================================
 
@@ -20,10 +20,17 @@ performance:
   unload-player-cache-on-quit: true
 
 rotations:
+  # Cada pool sortea una cantidad global entre min-missions y max-missions.
+  # NORMAL: solo definiciones normal.
+  # VIP1: definiciones normal + vip1 que no hayan salido antes.
+  # VIP2: definiciones vip1 + vip2 que no hayan salido antes.
   daily:
     enabled: true
     duration-days: 1
-    mission-count: 4
+    pools:
+      normal: { min-missions: 5, max-missions: 8 }
+      vip1: { min-missions: 2, max-missions: 5 }
+      vip2: { min-missions: 1, max-missions: 4 }
     anchor-date: "2026-01-01"
     reset-time: "00:00"
     seed: "mdvquest-daily"
@@ -31,7 +38,10 @@ rotations:
   two-days:
     enabled: true
     duration-days: 2
-    mission-count: 2
+    pools:
+      normal: { min-missions: 3, max-missions: 5 }
+      vip1: { min-missions: 1, max-missions: 3 }
+      vip2: { min-missions: 1, max-missions: 2 }
     anchor-date: "2026-01-01"
     reset-time: "00:00"
     seed: "mdvquest-two-days"
@@ -39,7 +49,10 @@ rotations:
   three-days:
     enabled: true
     duration-days: 3
-    mission-count: 1
+    pools:
+      normal: { min-missions: 2, max-missions: 4 }
+      vip1: { min-missions: 1, max-missions: 3 }
+      vip2: { min-missions: 1, max-missions: 2 }
     anchor-date: "2026-01-01"
     reset-time: "00:00"
     seed: "mdvquest-three-days"
@@ -47,7 +60,10 @@ rotations:
   four-days:
     enabled: true
     duration-days: 4
-    mission-count: 1
+    pools:
+      normal: { min-missions: 2, max-missions: 3 }
+      vip1: { min-missions: 1, max-missions: 2 }
+      vip2: { min-missions: 1, max-missions: 2 }
     anchor-date: "2026-01-01"
     reset-time: "00:00"
     seed: "mdvquest-four-days"
@@ -55,7 +71,10 @@ rotations:
   five-days:
     enabled: true
     duration-days: 5
-    mission-count: 1
+    pools:
+      normal: { min-missions: 1, max-missions: 3 }
+      vip1: { min-missions: 1, max-missions: 2 }
+      vip2: { min-missions: 1, max-missions: 1 }
     anchor-date: "2026-01-01"
     reset-time: "00:00"
     seed: "mdvquest-five-days"
@@ -63,7 +82,10 @@ rotations:
   six-days:
     enabled: true
     duration-days: 6
-    mission-count: 1
+    pools:
+      normal: { min-missions: 1, max-missions: 3 }
+      vip1: { min-missions: 1, max-missions: 2 }
+      vip2: { min-missions: 1, max-missions: 1 }
     anchor-date: "2026-01-01"
     reset-time: "00:00"
     seed: "mdvquest-six-days"
@@ -71,10 +93,27 @@ rotations:
   weekly:
     enabled: true
     duration-days: 7
-    mission-count: 3
+    pools:
+      normal: { min-missions: 3, max-missions: 5 }
+      vip1: { min-missions: 2, max-missions: 4 }
+      vip2: { min-missions: 1, max-missions: 3 }
     anchor-date: "2026-01-05"
     reset-time: "00:00"
     seed: "mdvquest-weekly"
+
+access-tiers:
+  # VIP2 puede reclamar también instancias VIP1 aunque LuckPerms no herede el permiso.
+  vip2-inherits-vip1: true
+  normal:
+    display-name: "Normal"
+  vip1:
+    display-name: "VIP"
+    permission: "mdvquest.access.vip1"
+    locked-material: LIGHT_BLUE_STAINED_GLASS_PANE
+  vip2:
+    display-name: "VIP 2"
+    permission: "mdvquest.access.vip2"
+    locked-material: YELLOW_STAINED_GLASS_PANE
 
 menus:
   # Puede ser URL directa de textures.minecraft.net o Value Base64 de Minecraft-Heads.
@@ -108,6 +147,10 @@ menus:
     back-slot: 49
     next-page-slot: 53
     selected-category-glow: true
+
+    access:
+      # Se muestra a jugadores que pueden progresar la misión, pero todavía no pueden reclamarla.
+      locked-line: "&b● Necesitas el rango &f%rank% &bpara reclamar la recompensa de esta misión."
 
     back-button:
       name: "&eVolver"
@@ -289,3 +332,8 @@ messages:
   delivery-progress: "&aEntregaste &f%amount%&a. Progreso: &f%progress%/%required%"
   reload: "&aMDVQuest recargado."
   forced-rotation: "&aRotacion regenerada: &f%rotation%"
+  mission-rank-required: "&cNecesitas el rango &f%rank% &cpara reclamar esta recompensa."
+  reroll-warning: "&eEsto borrará el progreso y recompensas pendientes de la rotación &f%rotation%&e. Confirma con: &f%command%"
+  reroll-all-warning: "&cEsto regenerará TODAS las rotaciones y borrará todo su progreso/recompensas pendientes. Confirma con: &f%command%"
+  reroll-success: "&aReroll completado para la rotación: &f%rotation%"
+  reroll-all-success: "&aReroll completado para &f%count% &arotaciones."

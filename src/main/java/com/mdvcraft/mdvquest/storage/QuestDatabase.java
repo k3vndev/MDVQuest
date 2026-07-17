@@ -1,6 +1,7 @@
 package com.mdvcraft.mdvquest.storage;
 
 import com.mdvcraft.mdvquest.MDVQuestPlugin;
+import com.mdvcraft.mdvquest.model.AccessTier;
 import com.mdvcraft.mdvquest.model.MissionInstance;
 import com.mdvcraft.mdvquest.model.ObjectiveKey;
 import com.mdvcraft.mdvquest.model.PlayerQuestState;
@@ -58,6 +59,7 @@ public final class QuestDatabase implements AutoCloseable {
                       id TEXT PRIMARY KEY,
                       cycle_key TEXT NOT NULL,
                       rotation_id TEXT NOT NULL,
+                      access_pool TEXT NOT NULL DEFAULT 'normal',
                       definition_id TEXT NOT NULL,
                       starts_at INTEGER NOT NULL,
                       expires_at INTEGER NOT NULL,
@@ -124,17 +126,37 @@ public final class QuestDatabase implements AutoCloseable {
                     )
                     """);
         }
+        ensureColumn("mission_instances", "access_pool", "TEXT NOT NULL DEFAULT 'normal'");
+    }
+
+    private void ensureColumn(String table, String column, String definition) throws SQLException {
+        boolean exists = false;
+        try (Statement statement = connection.createStatement();
+             ResultSet result = statement.executeQuery("PRAGMA table_info(" + table + ")")) {
+            while (result.next()) {
+                if (column.equalsIgnoreCase(result.getString("name"))) {
+                    exists = true;
+                    break;
+                }
+            }
+        }
+        if (!exists) {
+            try (Statement statement = connection.createStatement()) {
+                statement.executeUpdate("ALTER TABLE " + table + " ADD COLUMN " + column + " " + definition);
+            }
+        }
     }
 
     public synchronized List<StoredInstance> loadUnexpiredInstances(long now) throws SQLException {
         List<StoredInstance> result = new ArrayList<>();
         try (PreparedStatement statement = connection.prepareStatement(
-                "SELECT id, cycle_key, rotation_id, definition_id, starts_at, expires_at FROM mission_instances WHERE expires_at > ? ORDER BY expires_at, id")) {
+                "SELECT id, cycle_key, rotation_id, access_pool, definition_id, starts_at, expires_at FROM mission_instances WHERE expires_at > ? ORDER BY expires_at, id")) {
             statement.setLong(1, now);
             try (ResultSet rs = statement.executeQuery()) {
                 while (rs.next()) {
                     result.add(new StoredInstance(
-                            rs.getString("id"), rs.getString("cycle_key"), rs.getString("rotation_id"), rs.getString("definition_id"),
+                            rs.getString("id"), rs.getString("cycle_key"), rs.getString("rotation_id"),
+                            AccessTier.parse(rs.getString("access_pool")), rs.getString("definition_id"),
                             rs.getLong("starts_at"), rs.getLong("expires_at")
                     ));
                 }
@@ -155,16 +177,17 @@ public final class QuestDatabase implements AutoCloseable {
         boolean previous = connection.getAutoCommit();
         connection.setAutoCommit(false);
         try (PreparedStatement statement = connection.prepareStatement(
-                "INSERT OR IGNORE INTO mission_instances(id, cycle_key, rotation_id, definition_id, starts_at, expires_at, created_at) VALUES(?,?,?,?,?,?,?)")) {
+                "INSERT OR IGNORE INTO mission_instances(id, cycle_key, rotation_id, access_pool, definition_id, starts_at, expires_at, created_at) VALUES(?,?,?,?,?,?,?,?)")) {
             long now = System.currentTimeMillis();
             for (MissionInstance instance : instances) {
                 statement.setString(1, instance.id());
                 statement.setString(2, instance.cycleKey());
                 statement.setString(3, instance.rotationId());
-                statement.setString(4, instance.definition().id());
-                statement.setLong(5, instance.startsAt());
-                statement.setLong(6, instance.expiresAt());
-                statement.setLong(7, now);
+                statement.setString(4, instance.accessTier().key());
+                statement.setString(5, instance.definition().id());
+                statement.setLong(6, instance.startsAt());
+                statement.setLong(7, instance.expiresAt());
+                statement.setLong(8, now);
                 statement.addBatch();
             }
             statement.executeBatch();
@@ -413,5 +436,5 @@ public final class QuestDatabase implements AutoCloseable {
         connection = null;
     }
 
-    public record StoredInstance(String id, String cycleKey, String rotationId, String definitionId, long startsAt, long expiresAt) { }
+    public record StoredInstance(String id, String cycleKey, String rotationId, AccessTier accessTier, String definitionId, long startsAt, long expiresAt) { }
 }

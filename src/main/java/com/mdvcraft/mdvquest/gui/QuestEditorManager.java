@@ -3,6 +3,7 @@ package com.mdvcraft.mdvquest.gui;
 import com.mdvcraft.mdvquest.MDVQuestPlugin;
 import com.mdvcraft.mdvquest.hook.MMOItemsHook;
 import com.mdvcraft.mdvquest.hook.MythicItemsHook;
+import com.mdvcraft.mdvquest.model.AccessTier;
 import com.mdvcraft.mdvquest.model.MissionDefinition;
 import com.mdvcraft.mdvquest.model.ObjectiveDefinition;
 import com.mdvcraft.mdvquest.model.ObjectiveType;
@@ -141,6 +142,13 @@ public final class QuestEditorManager implements Listener {
         inventory.setItem(24, item(draft.enabled() ? Material.LIME_DYE : Material.GRAY_DYE,
                 draft.enabled() ? "&aMisión habilitada" : "&7Misión deshabilitada",
                 List.of("&7Click para alternar."), "TOGGLE_ENABLED", -1, 1, null, null, null));
+        inventory.setItem(25, item(accessMaterial(draft.accessTier()), "&eAcceso / pool",
+                List.of(
+                        "&7Actual: &f" + accessDisplay(draft.accessTier()),
+                        "&7Define en qué catálogo puede salir.",
+                        "",
+                        "&eClick para seleccionar."
+                ), "EDIT_ACCESS", -1, 1, null, null, null));
 
         inventory.setItem(45, backHead("EDITOR_BACK", "&eVolver", List.of("&7Regresa al catálogo administrativo.")));
         inventory.setItem(48, item(Material.BARRIER, "&cCancelar", List.of("&7Descarta el borrador."), "CANCEL_DRAFT", -1, 1, null, null, null));
@@ -148,6 +156,34 @@ public final class QuestEditorManager implements Listener {
         inventory.setItem(50, item(Material.REDSTONE_BLOCK, "&cResetear", List.of("&7Borra el contenido del borrador actual."), "RESET_DRAFT", -1, 1, null, null, null));
         inventory.setItem(53, item(Material.BARRIER, "&cCerrar", List.of(), "CLOSE", -1, 1, null, null, null));
         open(player, inventory, MenuType.EDITOR, 1, null, null);
+    }
+
+    private void openAccessPicker(Player player) {
+        QuestDraft draft = drafts.get(player.getUniqueId());
+        if (draft == null) {
+            openDurationPicker(player);
+            return;
+        }
+        Inventory inventory = plugin.getSocialHook().createInventory(null, "&8Acceso de la misión", 54, true);
+        inventory.setItem(20, item(Material.PAPER, "&fNormal", List.of(
+                "&7Puede salir en el pool normal.",
+                "&7También puede ser elegida como extra VIP1.",
+                "",
+                draft.accessTier() == AccessTier.NORMAL ? "&aSeleccionada." : "&eClick para seleccionar."
+        ), "SET_ACCESS", -1, 1, null, null, AccessTier.NORMAL.key()));
+        inventory.setItem(22, item(Material.LIGHT_BLUE_STAINED_GLASS_PANE, "&bVIP 1", List.of(
+                "&7Puede salir en el pool VIP1.",
+                "&7También puede ser elegida como extra VIP2.",
+                "",
+                draft.accessTier() == AccessTier.VIP1 ? "&aSeleccionada." : "&eClick para seleccionar."
+        ), "SET_ACCESS", -1, 1, null, null, AccessTier.VIP1.key()));
+        inventory.setItem(24, item(Material.YELLOW_STAINED_GLASS_PANE, "&eVIP 2", List.of(
+                "&7Solo puede salir en el pool VIP2.",
+                "",
+                draft.accessTier() == AccessTier.VIP2 ? "&aSeleccionada." : "&eClick para seleccionar."
+        ), "SET_ACCESS", -1, 1, null, null, AccessTier.VIP2.key()));
+        inventory.setItem(49, backHead("EDITOR", "&eVolver", List.of("&7Regresa al editor.")));
+        open(player, inventory, MenuType.ACCESS_TIER, 1, null, null);
     }
 
     public void openAdminCatalog(Player player) {
@@ -351,6 +387,8 @@ public final class QuestEditorManager implements Listener {
             case "EDIT_DURATION" -> openDurationPicker(player);
             case "EDIT_FILE" -> openFileChooser(player);
             case "EDIT_WEIGHT" -> promptWeight(player);
+            case "EDIT_ACCESS" -> openAccessPicker(player);
+            case "SET_ACCESS" -> { draft(player).setAccessTier(AccessTier.parse(missionId)); openEditor(player); }
             case "ADD_OBJECTIVE" -> { if (event.isRightClick() && event.isShiftClick()) openObjectiveManage(player); else openObjectiveCatalog(player, 1); }
             case "MANAGE_OBJECTIVES" -> openObjectiveManage(player);
             case "OBJECTIVE_PAGE" -> openObjectiveCatalog(player, page);
@@ -769,6 +807,7 @@ public final class QuestEditorManager implements Listener {
         lore.add("&7ID: &f" + draft.id());
         lore.add("&7Duración: &f" + draft.durationDays() + " días");
         lore.add("&7Archivo: &f" + draft.targetFile());
+        lore.add("&7Acceso: &f" + accessDisplay(draft.accessTier()));
         lore.add("&7Objetivos: &f" + draft.objectives().size());
         lore.add("&7Estado: " + (draft.enabled() ? "&aHabilitada" : "&7Deshabilitada"));
         lore.addAll(rewardSummary(draft.rewards()));
@@ -786,6 +825,7 @@ public final class QuestEditorManager implements Listener {
         lore.add("&7ID: &f" + mission.id());
         lore.add("&7Archivo: &f" + mission.sourceFile());
         lore.add("&7Duración: &f" + plugin.getRegistry().durationDays(mission) + " días");
+        lore.add("&7Pool de definición: &f" + accessDisplay(mission.accessTier()));
         lore.add("&7Objetivos: &f" + mission.objectives().size());
         lore.add("&7Estado: " + (mission.enabled() ? "&aHabilitada" : "&7Deshabilitada"));
         lore.add("");
@@ -861,6 +901,22 @@ public final class QuestEditorManager implements Listener {
             if (part.length() > 1) result.append(part.substring(1).toLowerCase(Locale.ROOT));
         }
         return result.isEmpty() ? normalized : result.toString();
+    }
+
+    private String accessDisplay(AccessTier tier) {
+        return switch (tier == null ? AccessTier.NORMAL : tier) {
+            case NORMAL -> "Normal";
+            case VIP1 -> "VIP 1";
+            case VIP2 -> "VIP 2";
+        };
+    }
+
+    private Material accessMaterial(AccessTier tier) {
+        return switch (tier == null ? AccessTier.NORMAL : tier) {
+            case NORMAL -> Material.PAPER;
+            case VIP1 -> Material.LIGHT_BLUE_STAINED_GLASS_PANE;
+            case VIP2 -> Material.YELLOW_STAINED_GLASS_PANE;
+        };
     }
 
     private String uniqueObjectiveId(QuestDraft draft, ObjectiveType type) {
@@ -991,7 +1047,7 @@ public final class QuestEditorManager implements Listener {
     }
 
     private enum MenuType {
-        DURATION, EDITOR, OBJECTIVE_CATALOG, OBJECTIVE_MANAGE, REWARD_ITEMS,
+        DURATION, EDITOR, ACCESS_TIER, OBJECTIVE_CATALOG, OBJECTIVE_MANAGE, REWARD_ITEMS,
         XP_REWARDS, FILE_CHOOSER, ADMIN_CATALOG, ADMIN_PREVIEW
     }
 

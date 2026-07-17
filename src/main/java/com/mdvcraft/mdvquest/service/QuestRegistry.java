@@ -1,6 +1,8 @@
 package com.mdvcraft.mdvquest.service;
 
 import com.mdvcraft.mdvquest.MDVQuestPlugin;
+import com.mdvcraft.mdvquest.model.AccessTier;
+import com.mdvcraft.mdvquest.model.MissionCountRange;
 import com.mdvcraft.mdvquest.model.MissionDefinition;
 import com.mdvcraft.mdvquest.model.ObjectiveDefinition;
 import com.mdvcraft.mdvquest.model.ObjectiveType;
@@ -21,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -74,11 +77,26 @@ public final class QuestRegistry {
             try {
                 LocalDate anchor = LocalDate.parse(section.getString("anchor-date", "2026-01-01"));
                 LocalTime time = LocalTime.parse(section.getString("reset-time", "00:00"));
+                EnumMap<AccessTier, MissionCountRange> counts = new EnumMap<>(AccessTier.class);
+                ConfigurationSection pools = section.getConfigurationSection("pools");
+                if (pools == null) {
+                    int legacy = Math.max(0, section.getInt("mission-count", 1));
+                    counts.put(AccessTier.NORMAL, new MissionCountRange(legacy, legacy));
+                    counts.put(AccessTier.VIP1, new MissionCountRange(0, 0));
+                    counts.put(AccessTier.VIP2, new MissionCountRange(0, 0));
+                } else {
+                    for (AccessTier tier : AccessTier.values()) {
+                        ConfigurationSection pool = pools.getConfigurationSection(tier.key());
+                        int min = pool == null ? 0 : Math.max(0, pool.getInt("min-missions", pool.getInt("min", 0)));
+                        int max = pool == null ? 0 : Math.max(min, pool.getInt("max-missions", pool.getInt("max", min)));
+                        counts.put(tier, new MissionCountRange(min, max));
+                    }
+                }
                 rotations.put(id, new RotationDefinition(
                         id,
                         section.getBoolean("enabled", true),
                         section.getInt("duration-days", 1),
-                        section.getInt("mission-count", 1),
+                        counts,
                         anchor,
                         time,
                         section.getString("seed", "mdvquest-" + id)
@@ -136,6 +154,7 @@ public final class QuestRegistry {
     private MissionDefinition parseMission(String id, ConfigurationSection section, String sourceFile) {
         boolean enabled = section.getBoolean("enabled", true);
         String rotation = normalizeRotation(section.getString("rotation", "daily"));
+        AccessTier accessTier = AccessTier.parse(section.getString("access-pool", section.getString("access-tier", "normal")));
         int weight = Math.max(1, section.getInt("weight", 1));
         String name = section.getString("name", id);
         String icon = section.getString("icon", "PAPER");
@@ -160,7 +179,7 @@ public final class QuestRegistry {
 
         if (objectives.isEmpty()) throw new IllegalArgumentException("la mision no contiene objetivos");
         RewardDefinition rewards = parseRewards(section.getConfigurationSection("rewards"));
-        return new MissionDefinition(id, enabled, rotation, weight, name, icon, iconItem, lore, objectives, rewards, sourceFile);
+        return new MissionDefinition(id, enabled, rotation, accessTier, weight, name, icon, iconItem, lore, objectives, rewards, sourceFile);
     }
 
     private RewardDefinition parseRewards(ConfigurationSection section) {
@@ -278,6 +297,15 @@ public final class QuestRegistry {
     public List<MissionDefinition> missionsForRotation(String rotationId) {
         String normalized = normalizeRotation(rotationId);
         return missions.values().stream().filter(MissionDefinition::enabled).filter(m -> m.rotation().equals(normalized)).toList();
+    }
+
+    public List<MissionDefinition> missionsForRotation(String rotationId, Set<AccessTier> allowedDefinitionPools) {
+        String normalized = normalizeRotation(rotationId);
+        return missions.values().stream()
+                .filter(MissionDefinition::enabled)
+                .filter(mission -> mission.rotation().equals(normalized))
+                .filter(mission -> allowedDefinitionPools.contains(mission.accessTier()))
+                .toList();
     }
 
     public int durationDays(MissionDefinition mission) {

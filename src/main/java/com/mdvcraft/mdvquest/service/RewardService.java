@@ -37,21 +37,31 @@ public final class RewardService {
     private final QuestDatabase database;
     private final MMOItemsHook mmoItems;
     private final MythicItemsHook mythicItems;
+    private final AccessService access;
     private final Set<UUID> claiming = new HashSet<>();
 
     public RewardService(MDVQuestPlugin plugin, ProgressService progress, QuestDatabase database,
-                         MMOItemsHook mmoItems, MythicItemsHook mythicItems) {
+                         MMOItemsHook mmoItems, MythicItemsHook mythicItems, AccessService access) {
         this.plugin = plugin;
         this.progress = progress;
         this.database = database;
         this.mmoItems = mmoItems;
         this.mythicItems = mythicItems;
+        this.access = access;
     }
 
     public boolean claim(Player player, MissionInstance instance) {
         long now = System.currentTimeMillis();
         if (instance == null || !instance.isActive(now)) {
             plugin.message(player, "mission-expired", Map.of());
+            return false;
+        }
+        if (!access.hasAccess(player, instance.accessTier())) {
+            plugin.message(player, "mission-rank-required", Map.of(
+                    "rank", access.displayName(instance.accessTier()),
+                    "permission", access.permission(instance.accessTier())
+            ));
+            plugin.getSocialHook().sound(player, "error");
             return false;
         }
         if (progress.claimed(player, instance)) {
@@ -106,6 +116,13 @@ public final class RewardService {
             long now = System.currentTimeMillis();
             if (!instance.isActive(now)) {
                 plugin.message(player, "mission-expired", Map.of());
+                return;
+            }
+            if (!access.hasAccess(player, instance.accessTier())) {
+                plugin.message(player, "mission-rank-required", Map.of(
+                        "rank", access.displayName(instance.accessTier()),
+                        "permission", access.permission(instance.accessTier())
+                ));
                 return;
             }
             if (progress.claimed(player, instance) || !progress.isMissionComplete(player, instance)) return;

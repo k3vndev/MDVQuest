@@ -5,6 +5,7 @@ import com.mdvcraft.mdvquest.model.MissionInstance;
 import com.mdvcraft.mdvquest.model.ObjectiveDefinition;
 import com.mdvcraft.mdvquest.model.RewardDefinition;
 import com.mdvcraft.mdvquest.model.RotationDefinition;
+import com.mdvcraft.mdvquest.service.AccessService;
 import com.mdvcraft.mdvquest.service.DeliveryService;
 import com.mdvcraft.mdvquest.service.ProgressService;
 import com.mdvcraft.mdvquest.service.RewardService;
@@ -62,6 +63,7 @@ public final class QuestMenuManager implements Listener {
     private final ProgressService progress;
     private final RewardService rewards;
     private final DeliveryService deliveries;
+    private final AccessService access;
     private final Map<UUID, MenuSession> sessions = new HashMap<>();
     private final NamespacedKey actionKey;
     private final NamespacedKey instanceKey;
@@ -70,12 +72,13 @@ public final class QuestMenuManager implements Listener {
     private final NamespacedKey groupKey;
 
     public QuestMenuManager(MDVQuestPlugin plugin, RotationService rotations, ProgressService progress,
-                            RewardService rewards, DeliveryService deliveries) {
+                            RewardService rewards, DeliveryService deliveries, AccessService access) {
         this.plugin = plugin;
         this.rotations = rotations;
         this.progress = progress;
         this.rewards = rewards;
         this.deliveries = deliveries;
+        this.access = access;
         this.actionKey = new NamespacedKey(plugin, "menu_action");
         this.instanceKey = new NamespacedKey(plugin, "instance_id");
         this.objectiveKey = new NamespacedKey(plugin, "objective_id");
@@ -169,7 +172,8 @@ public final class QuestMenuManager implements Listener {
             openMain(player);
             return;
         }
-        if (progress.isMissionComplete(player, instance) && !progress.claimed(player, instance)) {
+        if (progress.isMissionComplete(player, instance) && !progress.claimed(player, instance)
+                && access.hasAccess(player, instance.accessTier())) {
             rewards.claim(player, instance);
             return;
         }
@@ -267,8 +271,10 @@ public final class QuestMenuManager implements Listener {
     private ItemStack missionItem(Player player, MissionInstance instance, long now) {
         boolean complete = progress.isMissionComplete(player, instance);
         boolean claimed = progress.claimed(player, instance);
+        boolean locked = !access.hasAccess(player, instance.accessTier());
         ItemStack item;
         if (claimed) item = new ItemStack(material("menus.main.mission-state.claimed-material", Material.GRAY_DYE));
+        else if (locked) item = new ItemStack(access.lockedMaterial(instance.accessTier()));
         else if (complete) item = new ItemStack(material("menus.main.mission-state.completed-material", Material.LIME_WOOL));
         else {
             item = instance.definition().iconItem();
@@ -300,19 +306,29 @@ public final class QuestMenuManager implements Listener {
                     "%state%&f%objective% &7(%progress%/%required%)", values)));
         }
         appendRewardLore(lore, instance.definition().rewards());
+        if (locked) {
+            lore.add(Component.empty());
+            lore.add(ItemDisplayUtil.legacy(text("menus.main.access.locked-line",
+                    "&b● Necesitas el rango &f%rank% &bpara reclamar esta recompensa.", Map.of(
+                            "rank", access.displayName(instance.accessTier()),
+                            "permission", access.permission(instance.accessTier()),
+                            "pool", instance.accessTier().key()
+                    ))));
+        }
         lore.add(Component.empty());
         lore.add(ItemDisplayUtil.legacy(text("menus.main.mission-lore.expiration",
                 "&7Expira en: &f%remaining%", Map.of("remaining", TimeUtil.remaining(instance.expiresAt(), now)))));
         lore.add(Component.empty());
         if (claimed) lore.add(ItemDisplayUtil.legacy(text("menus.main.mission-lore.claimed",
                 "&7Recompensa ya reclamada.", Map.of())));
-        else if (complete) lore.add(ItemDisplayUtil.legacy(text("menus.main.mission-lore.completed",
+        else if (complete && !locked) lore.add(ItemDisplayUtil.legacy(text("menus.main.mission-lore.completed",
                 "&a&lClick para recibir la recompensa.", Map.of())));
         else lore.add(ItemDisplayUtil.legacy(text("menus.main.mission-lore.details",
                 "&eClick para ver más detalles.", Map.of())));
 
+        String action = complete && !claimed && !locked ? "CLAIM" : "DETAIL";
         return decorate(item, instance.definition().name(), lore,
-                complete && !claimed ? "CLAIM" : "DETAIL", instance.id(), null, 1, groupFor(instance));
+                action, instance.id(), null, 1, groupFor(instance));
     }
 
     private ItemStack objectiveItem(Player player, MissionInstance instance, ObjectiveDefinition objective) {

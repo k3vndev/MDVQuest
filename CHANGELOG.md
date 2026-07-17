@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.2.0
+
+- Cantidad variable por rotación y pool mediante `min-missions` / `max-missions`.
+- Tres selecciones globales: normal, VIP1 y VIP2.
+- Pool normal: definiciones normales.
+- Pool VIP1: definiciones normales restantes + definiciones VIP1.
+- Pool VIP2: definiciones VIP1 restantes + definiciones VIP2.
+- Sin porcentajes ni pesos por origen del pool; se conservan los pesos individuales existentes de cada misión.
+- No se repite una misma definición entre pools durante el mismo ciclo.
+- Todos los jugadores pueden ver y progresar todas las misiones activas.
+- Las recompensas VIP requieren permiso al reclamar.
+- Panel celeste para misiones VIP1 bloqueadas y panel amarillo para VIP2 bloqueadas.
+- Selector Normal/VIP1/VIP2 dentro del editor visual.
+- Migración automática de SQLite con la columna `access_pool`; instalaciones 1.1.x se conservan.
+- `/mdvquest reroll <rotación|all> confirmar` con advertencia obligatoria.
+
 ## 1.1.1
 
 - Eliminados el reloj de página y el botón de cerrar del menú público principal.

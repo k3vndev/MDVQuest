@@ -1,5 +1,5 @@
 name: MDVQuest
-version: 1.1.1
+version: 1.2.0
 main: com.mdvcraft.mdvquest.MDVQuestPlugin
 api-version: '1.21'
 author: MDVCRAFT
@@ -23,5 +23,16 @@ permissions:
     description: Permite consultar y reclamar misiones.
     default: true
   mdvquest.admin:
-    description: Permite recargar, rotar y reportar progreso manualmente.
+    description: Permite recargar, administrar y reportar progreso manualmente.
     default: op
+    children:
+      mdvquest.admin.reroll: true
+  mdvquest.admin.reroll:
+    description: Permite regenerar una o todas las rotaciones globales.
+    default: op
+  mdvquest.access.vip1:
+    description: Permite reclamar recompensas de instancias VIP1.
+    default: false
+  mdvquest.access.vip2:
+    description: Permite reclamar recompensas de instancias VIP2.
+    default: false

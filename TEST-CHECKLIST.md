@@ -1,14 +1,38 @@
-# Checklist de staging — MDVQuest 1.1.1
+# Checklist de staging — MDVQuest 1.2.0
 
 Prueba esta versión en una copia de Purpur 1.21.6 antes de producción.
 
 ## Arranque y migración
 
 - [ ] El servidor inicia sin `NoSuchMethodError`.
-- [ ] `/mdvquest status` muestra versión 1.1.1.
+- [ ] `/mdvquest status` muestra versión 1.2.0.
 - [ ] Las misiones y el progreso existentes de 1.0.3 permanecen.
 - [ ] `/mdvquest` abre el menú público.
 - [ ] `/mdvquest admin` exige `mdvquest.admin`.
+
+## Pools, permisos y cantidades variables
+
+- [ ] Cada rotación elige una cantidad dentro de `min-missions` / `max-missions` para normal, VIP1 y VIP2.
+- [ ] Reiniciar o ejecutar `/mdvquest reload` no cambia la cantidad ni la selección del ciclo actual.
+- [ ] El pool normal contiene únicamente definiciones `normal`.
+- [ ] El pool VIP1 mezcla normales restantes y definiciones `vip1`, sin repetir las normales ya activas.
+- [ ] El pool VIP2 mezcla definiciones `vip1` restantes y `vip2`, sin duplicados.
+- [ ] Todos los jugadores ven y progresan misiones normales, VIP1 y VIP2.
+- [ ] Sin permisos, VIP1 aparece como panel celeste y VIP2 como panel amarillo.
+- [ ] El lore bloqueado usa el texto editable y muestra el rango correcto.
+- [ ] `mdvquest.access.vip1` permite reclamar VIP1.
+- [ ] `mdvquest.access.vip2` permite reclamar VIP2 y, con herencia activada, también VIP1.
+- [ ] Perder el permiso antes de reclamar vuelve a bloquear la recompensa; recuperarlo la habilita mientras la misión no expire.
+- [ ] El editor guarda correctamente `access-pool: normal|vip1|vip2`.
+
+## Reroll
+
+- [ ] `/mdvquest reroll daily` solo muestra la advertencia y no cambia nada.
+- [ ] `/mdvquest reroll daily confirmar` regenera los tres pools de la diaria.
+- [ ] El reroll cambia cantidad/selección y conserva la expiración del ciclo actual.
+- [ ] El progreso y las recompensas pendientes de la rotación afectada se eliminan.
+- [ ] `/mdvquest reroll all confirmar` regenera todas las rotaciones habilitadas.
+- [ ] Un jugador sin `mdvquest.admin.reroll` no puede ejecutar el comando.
 
 ## Menú público
 

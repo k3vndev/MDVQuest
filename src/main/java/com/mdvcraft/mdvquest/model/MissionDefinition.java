@@ -11,6 +11,7 @@ public final class MissionDefinition {
     private final String id;
     private final boolean enabled;
     private final String rotation;
+    private final AccessTier accessTier;
     private final int weight;
     private final String name;
     private final String icon;
@@ -20,13 +21,14 @@ public final class MissionDefinition {
     private final RewardDefinition rewards;
     private final String sourceFile;
 
-    public MissionDefinition(String id, boolean enabled, String rotation, int weight, String name,
+    public MissionDefinition(String id, boolean enabled, String rotation, AccessTier accessTier, int weight, String name,
                              String icon, ItemStack iconItem, List<String> lore,
                              List<ObjectiveDefinition> objectives, RewardDefinition rewards,
                              String sourceFile) {
         this.id = normalize(id);
         this.enabled = enabled;
         this.rotation = normalize(rotation);
+        this.accessTier = accessTier == null ? AccessTier.NORMAL : accessTier;
         this.weight = Math.max(1, weight);
         this.name = name == null || name.isBlank() ? this.id : name;
         this.icon = icon == null || icon.isBlank() ? "PAPER" : icon.toUpperCase(Locale.ROOT);
@@ -41,12 +43,13 @@ public final class MissionDefinition {
     /** Compatibilidad con código 1.0.x. */
     public MissionDefinition(String id, String rotation, int weight, String name, String icon, List<String> lore,
                              List<ObjectiveDefinition> objectives, RewardDefinition rewards) {
-        this(id, true, rotation, weight, name, icon, null, lore, objectives, rewards, "missions.yml");
+        this(id, true, rotation, AccessTier.NORMAL, weight, name, icon, null, lore, objectives, rewards, "missions.yml");
     }
 
     public String id() { return id; }
     public boolean enabled() { return enabled; }
     public String rotation() { return rotation; }
+    public AccessTier accessTier() { return accessTier; }
     public int weight() { return weight; }
     public String name() { return name; }
     public String icon() { return icon; }

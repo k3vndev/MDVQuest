@@ -72,21 +72,47 @@ public final class MDVQuestCommand implements CommandExecutor, TabCompleter {
                 plugin.message(sender, "reload", Map.of());
             }
             case "status" -> showStatus(sender);
-            case "rotate", "reroll" -> {
-                if (args.length < 2) {
-                    sender.sendMessage("/mdvquest rotate <rotacion>");
-                    return true;
-                }
-                boolean success = plugin.forceRotate(args[1]);
-                if (success) plugin.message(sender, "forced-rotation", Map.of("rotation", args[1]));
-                else sender.sendMessage(plugin.prefix() + ColorUtil.color("&cRotacion desconocida o deshabilitada."));
-            }
+            case "rotate", "reroll" -> handleReroll(sender, args);
             case "event" -> reportBridge(sender, args, ObjectiveType.COMPLETE_EVENT);
             case "profexp" -> reportBridge(sender, args, ObjectiveType.EARN_PROFESSION_EXP);
             case "report" -> reportGeneric(sender, args);
             default -> help(sender);
         }
         return true;
+    }
+
+    private void handleReroll(CommandSender sender, String[] args) {
+        if (!sender.hasPermission("mdvquest.admin.reroll")) {
+            plugin.message(sender, "no-permission", Map.of());
+            return;
+        }
+        if (args.length < 2) {
+            sender.sendMessage(ColorUtil.color("&e/mdvquest reroll <rotacion|all> confirmar"));
+            return;
+        }
+        String target = args[1].toLowerCase(Locale.ROOT);
+        boolean all = target.equals("all") || target.equals("todas") || target.equals("todo");
+        if (!all && plugin.getRegistry().rotation(target) == null) {
+            sender.sendMessage(plugin.prefix() + ColorUtil.color("&cRotacion desconocida: &f" + target));
+            return;
+        }
+        boolean confirmed = args.length >= 3 && (args[2].equalsIgnoreCase("confirmar") || args[2].equalsIgnoreCase("confirm"));
+        if (!confirmed) {
+            plugin.message(sender, all ? "reroll-all-warning" : "reroll-warning", Map.of(
+                    "rotation", all ? "todas" : target,
+                    "command", "/mdvquest reroll " + (all ? "all" : target) + " confirmar"
+            ));
+            return;
+        }
+        if (all) {
+            int count = plugin.forceRotateAll();
+            if (count > 0) plugin.message(sender, "reroll-all-success", Map.of("count", String.valueOf(count)));
+            else sender.sendMessage(plugin.prefix() + ColorUtil.color("&cNo se pudo regenerar ninguna rotacion."));
+            return;
+        }
+        boolean success = plugin.forceRotate(target);
+        if (success) plugin.message(sender, "reroll-success", Map.of("rotation", target));
+        else sender.sendMessage(plugin.prefix() + ColorUtil.color("&cRotacion desconocida o deshabilitada."));
     }
 
     private void reportBridge(CommandSender sender, String[] args, ObjectiveType type) {
@@ -139,7 +165,9 @@ public final class MDVQuestCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage(ColorUtil.color("&7Instancias activas: &f" + active.size()));
         long now = System.currentTimeMillis();
         for (MissionInstance instance : active) {
-            sender.sendMessage(ColorUtil.color("&8- &f" + instance.definition().id() + " &7[" + instance.rotationId() + "] expira en " + TimeUtil.remaining(instance.expiresAt(), now)));
+            sender.sendMessage(ColorUtil.color("&8- &f" + instance.definition().id()
+                    + " &7[" + instance.rotationId() + "/" + instance.accessTier().key() + "] expira en "
+                    + TimeUtil.remaining(instance.expiresAt(), now)));
         }
     }
 
@@ -149,7 +177,7 @@ public final class MDVQuestCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage(ColorUtil.color("&e/mdvquest crear &7- crea una misión"));
         sender.sendMessage(ColorUtil.color("&e/mdvquest reload"));
         sender.sendMessage(ColorUtil.color("&e/mdvquest status"));
-        sender.sendMessage(ColorUtil.color("&e/mdvquest rotate <rotacion>"));
+        sender.sendMessage(ColorUtil.color("&e/mdvquest reroll <rotacion|all> confirmar"));
         sender.sendMessage(ColorUtil.color("&e/mdvquest event <jugador> <evento> [cantidad]"));
         sender.sendMessage(ColorUtil.color("&e/mdvquest profexp <jugador> <profesion> <cantidad>"));
         sender.sendMessage(ColorUtil.color("&e/mdvquest report <jugador> <tipo> <objetivo> <cantidad>"));
@@ -163,13 +191,18 @@ public final class MDVQuestCommand implements CommandExecutor, TabCompleter {
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (!sender.hasPermission("mdvquest.admin")) return Collections.emptyList();
-        if (args.length == 1) return filter(List.of("admin", "crear", "reload", "status", "rotate", "event", "profexp", "report"), args[0]);
+        if (args.length == 1) return filter(List.of("admin", "crear", "reload", "status", "reroll", "rotate", "event", "profexp", "report"), args[0]);
         if (args.length == 2 && args[0].equalsIgnoreCase("admin")) return filter(List.of("crear"), args[1]);
         if (args.length == 2 && (args[0].equalsIgnoreCase("event") || args[0].equalsIgnoreCase("profexp") || args[0].equalsIgnoreCase("report"))) {
             return filter(Bukkit.getOnlinePlayers().stream().map(Player::getName).toList(), args[1]);
         }
-        if (args.length == 2 && args[0].equalsIgnoreCase("rotate")) {
-            return filter(plugin.getRegistry().rotations().stream().map(r -> r.id()).toList(), args[1]);
+        if (args.length == 2 && (args[0].equalsIgnoreCase("rotate") || args[0].equalsIgnoreCase("reroll"))) {
+            List<String> rotations = new ArrayList<>(plugin.getRegistry().rotations().stream().map(r -> r.id()).toList());
+            rotations.add("all");
+            return filter(rotations, args[1]);
+        }
+        if (args.length == 3 && (args[0].equalsIgnoreCase("rotate") || args[0].equalsIgnoreCase("reroll"))) {
+            return filter(List.of("confirmar"), args[2]);
         }
         if (args.length == 3 && args[0].equalsIgnoreCase("report")) {
             return filter(Arrays.stream(ObjectiveType.values()).map(Enum::name).toList(), args[2]);

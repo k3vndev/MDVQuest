@@ -8,6 +8,7 @@ missions:
   caza_diaria:
     enabled: true
     rotation: daily
+    access-pool: normal
     weight: 10
     name: '&cCaceria cotidiana'
     icon: IRON_SWORD
@@ -32,6 +33,7 @@ missions:
   mineria_diaria:
     enabled: true
     rotation: daily
+    access-pool: normal
     weight: 10
     name: '&bTurno de mineria'
     icon: IRON_PICKAXE
@@ -56,6 +58,7 @@ missions:
   lenador_diario:
     enabled: true
     rotation: daily
+    access-pool: normal
     weight: 8
     name: '&6Madera para el asentamiento'
     icon: IRON_AXE
@@ -75,6 +78,7 @@ missions:
   agricultor_diario:
     enabled: true
     rotation: daily
+    access-pool: normal
     weight: 8
     name: '&aCosecha abundante'
     icon: WHEAT
@@ -100,6 +104,7 @@ missions:
   crafteo_materiales:
     enabled: false
     rotation: two-days
+    access-pool: normal
     weight: 10
     name: '&dAbastecimiento del forjador'
     icon: CRAFTING_TABLE
@@ -120,6 +125,7 @@ missions:
   receta_concreta:
     enabled: false
     rotation: daily
+    access-pool: normal
     name: '&ePedido especial'
     icon: ANVIL
     objectives:
@@ -138,6 +144,7 @@ missions:
   veta_custom:
     enabled: false
     rotation: two-days
+    access-pool: normal
     name: '&aCristales de la profundidad'
     icon: AMETHYST_SHARD
     objectives:
@@ -158,6 +165,7 @@ missions:
   familia_mythic:
     enabled: false
     rotation: four-days
+    access-pool: normal
     name: '&5La Hueste Insepulta'
     icon: WITHER_SKELETON_SKULL
     objectives:
@@ -181,6 +189,7 @@ missions:
   cazador_mythic:
     enabled: false
     rotation: daily
+    access-pool: normal
     name: '&cObjetivo identificado'
     icon: CROSSBOW
     objectives:
@@ -200,6 +209,7 @@ missions:
   entrega_mmoitem:
     enabled: false
     rotation: two-days
+    access-pool: normal
     name: '&eEntrega de materiales'
     icon: CHEST
     objectives:
@@ -219,6 +229,7 @@ missions:
   pvp_semanal:
     enabled: false
     rotation: weekly
+    access-pool: normal
     name: '&4Rivales dignos'
     icon: DIAMOND_SWORD
     objectives:
@@ -237,6 +248,7 @@ missions:
   evento_puente:
     enabled: false
     rotation: weekly
+    access-pool: normal
     name: '&cDefensor del mundo'
     icon: NETHER_STAR
     objectives:
@@ -255,6 +267,7 @@ missions:
   hostiles_generales:
     enabled: false
     rotation: three-days
+    access-pool: normal
     weight: 10
     name: '&4Amenazas de todo el mundo'
     icon: NETHERITE_SWORD
@@ -276,6 +289,7 @@ missions:
   recompensa_mythic_crucible:
     enabled: false
     rotation: weekly
+    access-pool: normal
     weight: 5
     name: '&5Reliquia del desafío'
     icon: NETHER_STAR

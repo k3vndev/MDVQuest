@@ -10,6 +10,7 @@ import com.mdvcraft.mdvquest.hook.MythicMobsHook;
 import com.mdvcraft.mdvquest.hook.MythicItemsHook;
 import com.mdvcraft.mdvquest.hook.PlaceholderHook;
 import com.mdvcraft.mdvquest.listener.GameplayListener;
+import com.mdvcraft.mdvquest.service.AccessService;
 import com.mdvcraft.mdvquest.service.DeliveryService;
 import com.mdvcraft.mdvquest.service.ExampleRewardSanitizer;
 import com.mdvcraft.mdvquest.service.IntegrationService;
@@ -42,6 +43,7 @@ public final class MDVQuestPlugin extends JavaPlugin {
     private RotationService rotationService;
     private ProgressService progressService;
     private PlacedBlockService placedBlockService;
+    private AccessService accessService;
     private RewardService rewardService;
     private DeliveryService deliveryService;
     private QuestMenuManager menuManager;
@@ -82,9 +84,10 @@ public final class MDVQuestPlugin extends JavaPlugin {
             progressService = new ProgressService(this, registry, rotationService, database);
             placedBlockService = new PlacedBlockService(this, registry, database);
             placedBlockService.initialize();
-            rewardService = new RewardService(this, progressService, database, mmoItemsHook, mythicItemsHook);
+            accessService = new AccessService(this);
+            rewardService = new RewardService(this, progressService, database, mmoItemsHook, mythicItemsHook, accessService);
             deliveryService = new DeliveryService(this, progressService, mmoItemsHook);
-            menuManager = new QuestMenuManager(this, rotationService, progressService, rewardService, deliveryService);
+            menuManager = new QuestMenuManager(this, rotationService, progressService, rewardService, deliveryService, accessService);
             promptManager = new ChatPromptManager(this);
             yamlService = new QuestYamlService(this);
             editorManager = new QuestEditorManager(this, promptManager, yamlService, rewardService, mmoItemsHook, mythicItemsHook);
@@ -179,6 +182,25 @@ public final class MDVQuestPlugin extends JavaPlugin {
         }
     }
 
+    public int forceRotateAll() {
+        int rotated = 0;
+        progressService.flushAll();
+        long now = System.currentTimeMillis();
+        try {
+            for (var rotation : registry.rotations()) {
+                if (!rotation.enabled()) continue;
+                if (rotationService.forceRotate(rotation.id(), now + rotated)) rotated++;
+            }
+            if (rotated > 0) {
+                progressService.rebuildIndex();
+                database.cleanupExpired(System.currentTimeMillis());
+            }
+        } catch (SQLException ex) {
+            getLogger().severe("No se pudieron forzar todas las rotaciones: " + ex.getMessage());
+        }
+        return rotated;
+    }
+
     public void runDatabaseAsync(Runnable task) {
         if (databaseExecutor == null || databaseExecutor.isShutdown()) return;
         databaseExecutor.execute(task);
@@ -212,6 +234,7 @@ public final class MDVQuestPlugin extends JavaPlugin {
     public QuestMenuManager getMenuManager() { return menuManager; }
     public QuestEditorManager getEditorManager() { return editorManager; }
     public QuestYamlService getYamlService() { return yamlService; }
+    public AccessService getAccessService() { return accessService; }
     public MDVSocialHook getSocialHook() { return socialHook; }
     public MMOItemsHook getMmoItemsHook() { return mmoItemsHook; }
     public MythicMobsHook getMythicMobsHook() { return mythicMobsHook; }

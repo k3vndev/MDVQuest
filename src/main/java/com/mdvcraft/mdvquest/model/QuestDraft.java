@@ -15,6 +15,7 @@ public final class QuestDraft {
     private boolean enabled = true;
     private int durationDays = 1;
     private String rotation = "daily";
+    private AccessTier accessTier = AccessTier.NORMAL;
     private int weight = 10;
     private String name = "&eNueva misión";
     private ItemStack icon = new ItemStack(Material.PAPER);
@@ -39,6 +40,7 @@ public final class QuestDraft {
         draft.enabled = mission.enabled();
         draft.durationDays = durationDays;
         draft.rotation = mission.rotation();
+        draft.accessTier = mission.accessTier();
         draft.weight = mission.weight();
         draft.name = mission.name();
         ItemStack iconItem = mission.iconItem();
@@ -60,6 +62,7 @@ public final class QuestDraft {
     public boolean enabled() { return enabled; }
     public int durationDays() { return durationDays; }
     public String rotation() { return rotation; }
+    public AccessTier accessTier() { return accessTier; }
     public int weight() { return weight; }
     public String name() { return name; }
     public ItemStack icon() { return icon.clone(); }
@@ -80,6 +83,7 @@ public final class QuestDraft {
         this.rotation = rotationForDays(this.durationDays);
     }
     public void setRotation(String rotation) { this.rotation = rotation; }
+    public void setAccessTier(AccessTier accessTier) { this.accessTier = accessTier == null ? AccessTier.NORMAL : accessTier; }
     public void setWeight(int weight) { this.weight = Math.max(1, weight); }
     public void setName(String name) { if (name != null && !name.isBlank()) this.name = name; }
     public void setIcon(ItemStack icon) {
@@ -114,6 +118,7 @@ public final class QuestDraft {
         originalFile = null;
         id = "mision-" + System.currentTimeMillis();
         enabled = true;
+        accessTier = AccessTier.NORMAL;
         weight = 10;
         name = "&eNueva misión";
         icon = new ItemStack(Material.PAPER);
