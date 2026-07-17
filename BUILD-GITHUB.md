@@ -1,20 +1,50 @@
-# Compilar MDVQuest 1.0.3 en GitHub
+# Compilar MDVQuest 1.1.0 con GitHub Actions
 
-1. Sube todo el contenido de `MDVQuest-main` a la raíz del repositorio.
-2. Abre la pestaña **Actions**.
-3. Ejecuta el workflow **Build MDVQuest** mediante `Run workflow`, o realiza un push a `main`.
-4. Cuando termine, abre la ejecución y descarga el artefacto `MDVQuest-1.0.3`.
-5. Dentro estará `MDVQuest-1.0.3.jar`.
+## Subir el proyecto
 
-El workflow utiliza Java 21, ejecuta `mvn -B -U clean package` contra el repositorio oficial de Paper y luego inspecciona el bytecode. La compilación falla si reaparece alguna firma falsa como `openInventory(...): void` o `setItemMeta(...): void`.
+1. Descomprime el ZIP fuente.
+2. Sube el contenido de la carpeta `MDVQuest-main` a la raíz del repositorio.
+3. Comprueba que en la raíz estén `pom.xml`, `src/`, `scripts/` y `.github/`.
+4. Haz commit y push a `main` o `master`.
 
-También puedes compilar localmente:
+## Compilar
+
+1. Abre la pestaña **Actions**.
+2. Selecciona **Build MDVQuest**.
+3. Pulsa **Run workflow**.
+4. Al finalizar, descarga el artefacto `MDVQuest-1.1.0`.
+5. Dentro estará `MDVQuest-1.1.0.jar`.
+
+El workflow ejecuta:
 
 ```bash
 mvn -B -U clean package
-bash scripts/verify-bytecode.sh target/MDVQuest-1.0.3.jar
+bash scripts/verify-bytecode.sh target/MDVQuest-1.1.0.jar
 ```
 
-## Nota sobre Purpur
+La segunda fase rechaza JAR que empaqueten Bukkit/Paper o que vuelvan a contener firmas erróneas como `openInventory(...): void` o `setItemMeta(...): void`.
 
-Purpur 1.21.6 es compatible con plugins compilados contra `paper-api:1.21.6-R0.1-SNAPSHOT`. No debes cambiar la dependencia a un JAR de Purpur ni añadir el JAR del servidor al repositorio.
+## Compilación local
+
+Requiere JDK 21 y Maven:
+
+```bash
+mvn -B -U clean package
+bash scripts/verify-bytecode.sh target/MDVQuest-1.1.0.jar
+```
+
+Resultado:
+
+```text
+target/MDVQuest-1.1.0.jar
+```
+
+## Instalación sobre 1.0.3
+
+1. Apaga completamente Purpur.
+2. Elimina solamente el JAR viejo de MDVQuest.
+3. Copia `MDVQuest-1.1.0.jar`.
+4. Conserva `plugins/MDVQuest/` y `mdvquest.db`.
+5. Arranca primero en staging y completa `TEST-CHECKLIST.md`.
+
+No uses gestores de recarga de plugins para sustituir el JAR.

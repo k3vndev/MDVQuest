@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-JAR="${1:-target/MDVQuest-1.0.3.jar}"
+JAR="${1:-target/MDVQuest-1.1.0.jar}"
 if [[ ! -f "$JAR" ]]; then
   echo "No existe el JAR: $JAR" >&2
   exit 1
@@ -18,8 +18,11 @@ trap 'rm -f "$DUMP"' EXIT
 
 javap -classpath "$JAR" -verbose \
   com.mdvcraft.mdvquest.gui.QuestMenuManager \
+  com.mdvcraft.mdvquest.gui.QuestEditorManager \
   com.mdvcraft.mdvquest.hook.MDVSocialHook \
-  com.mdvcraft.mdvquest.listener.GameplayListener > "$DUMP"
+  com.mdvcraft.mdvquest.listener.GameplayListener \
+  com.mdvcraft.mdvquest.service.RewardService \
+  com.mdvcraft.mdvquest.util.ItemUtil > "$DUMP"
 
 # Firmas que solo aparecen al compilar contra stubs incorrectos.
 forbidden=(

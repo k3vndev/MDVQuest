@@ -11,6 +11,7 @@ public enum ObjectiveType {
     KILL_MYTHIC_MOB,
     KILL_MOB_FAMILY,
     KILL_MINIBOSS,
+    KILL_ANY_HOSTILE_MOB,
     CRAFT_VANILLA_ITEM,
     CRAFT_RECIPE,
     CRAFT_CATEGORY,
@@ -28,6 +29,7 @@ public enum ObjectiveType {
         String normalized = raw.trim().toUpperCase(Locale.ROOT).replace('-', '_').replace(' ', '_');
         return switch (normalized) {
             case "KILL_MOB", "KILL_VANILLA" -> KILL_VANILLA_MOB;
+            case "KILL_ALL_HOSTILE", "KILL_GENERAL_MOB", "KILL_HOSTILE_MOB" -> KILL_ANY_HOSTILE_MOB;
             case "MINE_VANILLA_BLOCK", "BREAK_BLOCK" -> MINE_BLOCK;
             case "CRAFT_MDVRECIPE" -> CRAFT_RECIPE;
             case "DELIVER_ITEM" -> DELIVER_VANILLA_ITEM;

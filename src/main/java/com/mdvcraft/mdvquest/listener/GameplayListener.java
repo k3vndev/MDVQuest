@@ -13,6 +13,7 @@ import org.bukkit.block.data.Ageable;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Monster;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.event.EventHandler;
@@ -131,6 +132,9 @@ public final class GameplayListener implements Listener {
             progress.reportMythicKill(killer, dead.getUniqueId(), mythicId.get());
         } else {
             progress.report(killer, ObjectiveType.KILL_VANILLA_MOB, dead.getType().name(), 1L);
+            if (dead instanceof Monster) {
+                progress.report(killer, ObjectiveType.KILL_ANY_HOSTILE_MOB, dead.getType().name(), 1L);
+            }
         }
     }
 

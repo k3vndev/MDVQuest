@@ -2,9 +2,12 @@ package com.mdvcraft.mdvquest;
 
 import com.mdvcraft.mdvquest.command.MDVQuestCommand;
 import com.mdvcraft.mdvquest.gui.QuestMenuManager;
+import com.mdvcraft.mdvquest.gui.ChatPromptManager;
+import com.mdvcraft.mdvquest.gui.QuestEditorManager;
 import com.mdvcraft.mdvquest.hook.MDVSocialHook;
 import com.mdvcraft.mdvquest.hook.MMOItemsHook;
 import com.mdvcraft.mdvquest.hook.MythicMobsHook;
+import com.mdvcraft.mdvquest.hook.MythicItemsHook;
 import com.mdvcraft.mdvquest.hook.PlaceholderHook;
 import com.mdvcraft.mdvquest.listener.GameplayListener;
 import com.mdvcraft.mdvquest.service.DeliveryService;
@@ -13,6 +16,7 @@ import com.mdvcraft.mdvquest.service.MDVSocialMenuInstaller;
 import com.mdvcraft.mdvquest.service.PlacedBlockService;
 import com.mdvcraft.mdvquest.service.ProgressService;
 import com.mdvcraft.mdvquest.service.QuestRegistry;
+import com.mdvcraft.mdvquest.service.QuestYamlService;
 import com.mdvcraft.mdvquest.service.RewardService;
 import com.mdvcraft.mdvquest.service.RotationService;
 import com.mdvcraft.mdvquest.storage.QuestDatabase;
@@ -40,10 +44,14 @@ public final class MDVQuestPlugin extends JavaPlugin {
     private RewardService rewardService;
     private DeliveryService deliveryService;
     private QuestMenuManager menuManager;
+    private ChatPromptManager promptManager;
+    private QuestEditorManager editorManager;
+    private QuestYamlService yamlService;
     private IntegrationService integrationService;
     private final MDVSocialHook socialHook = new MDVSocialHook();
     private final MMOItemsHook mmoItemsHook = new MMOItemsHook();
     private final MythicMobsHook mythicMobsHook = new MythicMobsHook();
+    private final MythicItemsHook mythicItemsHook = new MythicItemsHook();
     private final PlaceholderHook placeholderHook = new PlaceholderHook();
     private ExecutorService databaseExecutor;
     private BukkitTask flushTask;
@@ -52,6 +60,7 @@ public final class MDVQuestPlugin extends JavaPlugin {
     @Override
     public void onEnable() {
         saveDefaultConfig();
+        getConfig().options().copyDefaults(true);
         saveResourceIfMissing("families.yml");
         saveResourceIfMissing("missions/examples.yml");
         databaseExecutor = Executors.newSingleThreadExecutor(runnable -> {
@@ -70,13 +79,18 @@ public final class MDVQuestPlugin extends JavaPlugin {
             progressService = new ProgressService(this, registry, rotationService, database);
             placedBlockService = new PlacedBlockService(this, registry, database);
             placedBlockService.initialize();
-            rewardService = new RewardService(this, progressService, database, mmoItemsHook);
+            rewardService = new RewardService(this, progressService, database, mmoItemsHook, mythicItemsHook);
             deliveryService = new DeliveryService(this, progressService, mmoItemsHook);
             menuManager = new QuestMenuManager(this, rotationService, progressService, rewardService, deliveryService);
+            promptManager = new ChatPromptManager(this);
+            yamlService = new QuestYamlService(this);
+            editorManager = new QuestEditorManager(this, promptManager, yamlService, rewardService, mmoItemsHook, mythicItemsHook);
             integrationService = new IntegrationService(this, progressService, mmoItemsHook);
 
             Bukkit.getPluginManager().registerEvents(new GameplayListener(this, progressService, placedBlockService, mmoItemsHook), this);
             Bukkit.getPluginManager().registerEvents(menuManager, this);
+            Bukkit.getPluginManager().registerEvents(promptManager, this);
+            Bukkit.getPluginManager().registerEvents(editorManager, this);
             integrationService.register();
 
             MDVQuestCommand executor = new MDVQuestCommand(this);
@@ -190,8 +204,11 @@ public final class MDVQuestPlugin extends JavaPlugin {
     public RotationService getRotationService() { return rotationService; }
     public ProgressService getProgressService() { return progressService; }
     public QuestMenuManager getMenuManager() { return menuManager; }
+    public QuestEditorManager getEditorManager() { return editorManager; }
+    public QuestYamlService getYamlService() { return yamlService; }
     public MDVSocialHook getSocialHook() { return socialHook; }
     public MMOItemsHook getMmoItemsHook() { return mmoItemsHook; }
     public MythicMobsHook getMythicMobsHook() { return mythicMobsHook; }
+    public MythicItemsHook getMythicItemsHook() { return mythicItemsHook; }
     public PlaceholderHook getPlaceholderHook() { return placeholderHook; }
 }

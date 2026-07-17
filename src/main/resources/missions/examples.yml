@@ -18,9 +18,17 @@ missions:
         amount: 15
         name: "Mata criaturas hostiles"
     rewards:
+      lore:
+        - "&7• &e150 monedas"
+        - "&7• &b100 EXP principal"
+      experience:
+        - profession: main
+          amount: 100
+      vanilla-items:
+        - material: COOKED_BEEF
+          amount: 2
       commands:
         - "eco give %player% 150"
-        - "mmocore admin exp give %player% main 100 false"
 
   mineria_diaria:
     enabled: true
@@ -113,6 +121,7 @@ missions:
       vetas:
         type: BREAK_CUSTOM_ORE
         targets: [VIRIDITA]
+        resource-kind: ORE
         amount: 12
         name: "Extrae vetas de Viridita"
     rewards:
@@ -199,3 +208,49 @@ missions:
     rewards:
       commands:
         - "eco give %player% 1000"
+
+
+  hostiles_generales:
+    enabled: false
+    rotation: three-days
+    weight: 10
+    name: "&4Amenazas de todo el mundo"
+    icon: NETHERITE_SWORD
+    lore:
+      - "&7Elimina cualquier criatura hostil."
+      - "&7Cuenta monstruos vanilla y MythicMobs."
+    objectives:
+      hostiles:
+        type: KILL_ANY_HOSTILE_MOB
+        amount: 60
+        name: "Elimina criaturas hostiles"
+    rewards:
+      experience:
+        - profession: main
+          amount: 500
+      mmoitems:
+        - type: MATERIAL
+          id: COFRE_SUMINISTROS
+          amount: 1
+      commands:
+        - "eco give %player% 750"
+
+  recompensa_mythic_crucible:
+    enabled: false
+    rotation: weekly
+    weight: 5
+    name: "&5Reliquia del desafío"
+    icon: NETHER_STAR
+    objectives:
+      evento:
+        type: COMPLETE_EVENT
+        event: JEFE_MUNDIAL
+        amount: 1
+        name: "Participa en el jefe mundial"
+    rewards:
+      mythic-items:
+        - id: RECOMPENSA_CRUCIBLE
+          amount: 1
+      experience:
+        - profession: main
+          amount: 1000

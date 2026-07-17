@@ -161,6 +161,7 @@ public final class ProgressService {
                 yield objective.targetMatches(target);
             }
             case KILL_VANILLA_MOB, KILL_MYTHIC_MOB, CRAFT_VANILLA_ITEM -> objective.targetMatches(target);
+            case KILL_ANY_HOSTILE_MOB -> true;
             case BREAK_CUSTOM_ORE -> {
                 String requiredKind = normalize(objective.string("resource-kind", ""));
                 String actualKind = normalize(data.getOrDefault("resource-kind", ""));
@@ -253,6 +254,7 @@ public final class ProgressService {
         changed += report(killer, ObjectiveType.KILL_MYTHIC_MOB, mythicId, 1L);
         changed += report(killer, ObjectiveType.KILL_MOB_FAMILY, mythicId, 1L);
         changed += report(killer, ObjectiveType.KILL_MINIBOSS, mythicId, 1L);
+        changed += report(killer, ObjectiveType.KILL_ANY_HOSTILE_MOB, mythicId, 1L);
         return changed;
     }
 

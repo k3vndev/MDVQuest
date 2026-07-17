@@ -1,6 +1,14 @@
-# Configuración de misiones
+# Configuración de MDVQuest 1.1.0
 
-Las definiciones se leen desde cualquier `.yml` dentro de `plugins/MDVQuest/missions/`.
+Las misiones se leen desde todos los archivos `.yml` ubicados en:
+
+```text
+plugins/MDVQuest/missions/
+```
+
+El editor visual escribe en esa misma carpeta y permite elegir el archivo de destino.
+
+## Ejemplo completo
 
 ```yaml
 missions:
@@ -12,29 +20,37 @@ missions:
     icon: AMETHYST_SHARD
     lore:
       - '&7Completa todos los objetivos.'
+
     objectives:
       hueste:
         type: KILL_MOB_FAMILY
         family: HUESTE_INSEPULTA
+        include-minibosses: false
         amount: 40
         name: 'Derrota miembros de la Hueste'
+
       receta:
         type: CRAFT_CATEGORY
         category: MATERIALES
         amount: 5
         count-produced-items: true
         name: 'Fabrica materiales'
+
       entrega:
         type: DELIVER_MMOITEM
         mmoitems-type: MATERIAL
         mmoitems-id: ESENCIA_FUNEBRE
         amount: 12
         name: 'Entrega Esencias Fúnebres'
+
     rewards:
       lore:
-        - '&7• 1200 monedas'
-      commands:
-        - 'eco give %player% 1200'
+        - '&7Premio de abastecimiento T2.'
+      experience:
+        - profession: main
+          amount: 500
+        - profession: minero
+          amount: 250
       vanilla-items:
         - material: GOLD_INGOT
           amount: 2
@@ -42,40 +58,299 @@ missions:
         - type: MATERIAL
           id: COFRE_T2
           amount: 1
+      mythic-items:
+        - id: RECOMPENSA_CRUCIBLE
+          amount: 1
+      commands:
+        - 'eco give %player% 1200'
 ```
 
-## Campos comunes de objetivo
+## Campos de misión
 
-- `amount`: progreso requerido.
-- `name`: texto mostrado.
-- `targets`: lista de materiales, entidades o IDs aceptados.
-- `worlds`: mundos válidos para ese objetivo.
-- `natural-only`: rechaza bloques colocados por jugadores.
+- `enabled`: participa o no en futuras selecciones.
+- `rotation`: ID definido en `config.yml`.
+- `weight`: peso relativo dentro del pool de esa rotación.
+- `name`: nombre con colores `&`.
+- `icon`: material de respaldo.
+- `icon-item`: objeto Bukkit serializado por el editor para conservar modelo, nombre y meta exacta.
+- `lore`: descripción.
+- `objectives`: uno o varios objetivos. Todos deben completarse.
+- `rewards`: recompensas manualmente reclamables.
 
-## Campos por tipo
+El editor limita a 9 objetivos por misión por defecto, ya que el menú de detalle reserva una fila completa. Se cambia con `editor.max-objectives-per-mission`.
 
-- `MINE_BLOCK`: `targets`, `natural-only`.
-- `BREAK_CUSTOM_ORE`: `targets` con la clave interna de MDVHeadOres y opcional `resource-kind: ORE|TREE_NODE`.
-- `CUT_LOG`: `targets` opcional; sin targets acepta cualquier `Tag.LOGS`.
-- `HARVEST_CROP`: `targets`, `mature-only` (true por defecto), `natural-only` opcional.
-- `KILL_VANILLA_MOB`: `targets` con EntityType.
-- `KILL_MYTHIC_MOB`: `targets` con IDs internos exactos.
-- `KILL_MOB_FAMILY`: `family` definida en `families.yml`, `include-minibosses`.
-- `KILL_MINIBOSS`: `family` o `targets`; sin ambos acepta cualquier miniboss registrado.
-- `CRAFT_VANILLA_ITEM`: `targets`, `count-produced-items`.
-- `CRAFT_RECIPE`: `recipe` o `targets`, `count-produced-items`.
-- `CRAFT_CATEGORY`: `category` o `targets`, `count-produced-items`.
-- `OBTAIN_MMOITEM`: `mmoitems-type`, `mmoitems-id` o `targets: [TYPE:ID]`; opcional `sources: [CRAFT, CUSTOM_ORE, PICKUP, ADMIN]`.
-- `DELIVER_MMOITEM`: `mmoitems-type`, `mmoitems-id` o `targets`.
-- `DELIVER_VANILLA_ITEM`: `material` o `targets`.
-- `USE_CONSUMABLE`: `material`/`targets` para vanilla, o `mmoitems-type` + `mmoitems-id` para MMOItems.
-- `EARN_PROFESSION_EXP`: `profession` o `targets`.
-- `COMPLETE_EVENT`: `event` o `targets`.
-- `PLAYER_KILL`: `unique-victims` y `worlds` opcionales; además aplica la protección PvP global.
+## Objetivos
 
-## Rotaciones
+### MINE_BLOCK
 
-Cada rotación usa días reales y una fecha ancla. V1 limita `duration-days` a 1–7.
+```yaml
+type: MINE_BLOCK
+targets: [IRON_ORE, DEEPSLATE_IRON_ORE]
+amount: 32
+natural-only: true
+```
+
+`natural-only` rechaza bloques colocados por jugadores. Para mantener el registro económico, define los materiales cuando se usa esta opción.
+
+### BREAK_CUSTOM_ORE
+
+```yaml
+type: BREAK_CUSTOM_ORE
+targets: [VIRIDITA]
+resource-kind: ORE
+amount: 12
+```
+
+Usa IDs internos emitidos por MDVHeadOres. `resource-kind` puede ser `ORE`, `TREE_NODE` u otro valor del plugin emisor.
+
+### CUT_LOG
+
+```yaml
+type: CUT_LOG
+targets: [OAK_LOG, BIRCH_LOG]
+amount: 40
+natural-only: true
+```
+
+Sin `targets`, acepta cualquier bloque de `Tag.LOGS`.
+
+### HARVEST_CROP
+
+```yaml
+type: HARVEST_CROP
+targets: [WHEAT, CARROTS, POTATOES]
+amount: 48
+mature-only: true
+natural-only: true
+```
+
+### KILL_VANILLA_MOB
+
+```yaml
+type: KILL_VANILLA_MOB
+targets: [ZOMBIE, SKELETON, SPIDER]
+amount: 20
+```
+
+### KILL_MYTHIC_MOB
+
+```yaml
+type: KILL_MYTHIC_MOB
+targets: [SAURIO_ACECHADOR, SAURIO_LANCERO]
+amount: 15
+```
+
+### KILL_MOB_FAMILY
+
+```yaml
+type: KILL_MOB_FAMILY
+family: HUESTE_INSEPULTA
+include-minibosses: false
+amount: 50
+```
+
+La familia se define en `families.yml`.
+
+### KILL_MINIBOSS
+
+Por familia:
+
+```yaml
+type: KILL_MINIBOSS
+family: HUESTE_INSEPULTA
+amount: 2
+```
+
+Por IDs:
+
+```yaml
+type: KILL_MINIBOSS
+targets: [NECROTIDO_FUERTE, SACERDOTE_FUNEBRE]
+amount: 2
+```
+
+Sin familia ni targets, acepta cualquier miniboss registrado en `families.yml`.
+
+### KILL_ANY_HOSTILE_MOB
+
+```yaml
+type: KILL_ANY_HOSTILE_MOB
+amount: 50
+```
+
+Cuenta monstruos vanilla y muertes de MythicMobs reportadas por la integración.
+
+### CRAFT_VANILLA_ITEM
+
+```yaml
+type: CRAFT_VANILLA_ITEM
+targets: [IRON_INGOT, BREAD]
+amount: 16
+count-produced-items: true
+```
+
+### CRAFT_RECIPE
+
+```yaml
+type: CRAFT_RECIPE
+recipe: NUCLEO_GELIDO_PULIDO
+amount: 3
+count-produced-items: true
+```
+
+También admite `targets` para varios IDs de MDVRecetas.
+
+### CRAFT_CATEGORY
+
+```yaml
+type: CRAFT_CATEGORY
+category: MATERIALES
+amount: 8
+count-produced-items: true
+```
+
+También admite `targets` para varias categorías.
+
+### OBTAIN_MMOITEM
+
+```yaml
+type: OBTAIN_MMOITEM
+targets: [MATERIAL:ESCAMA_SAURIA]
+amount: 10
+sources: [CRAFT, CUSTOM_ORE, PICKUP]
+```
+
+También acepta `mmoitems-type` y `mmoitems-id`. `sources` es opcional.
+
+### DELIVER_MMOITEM
+
+```yaml
+type: DELIVER_MMOITEM
+mmoitems-type: MATERIAL
+mmoitems-id: ESCAMA_SAURIA
+amount: 20
+```
+
+El jugador entrega parcial o totalmente desde el menú de detalle.
+
+### DELIVER_VANILLA_ITEM
+
+```yaml
+type: DELIVER_VANILLA_ITEM
+material: IRON_INGOT
+amount: 32
+```
+
+### USE_CONSUMABLE
+
+Vanilla:
+
+```yaml
+type: USE_CONSUMABLE
+targets: [COOKED_BEEF]
+amount: 8
+```
+
+MMOItems:
+
+```yaml
+type: USE_CONSUMABLE
+targets: [CONSUMABLE:TONIFICADOR_T2]
+amount: 3
+```
+
+### EARN_PROFESSION_EXP
+
+```yaml
+type: EARN_PROFESSION_EXP
+profession: minero
+amount: 500
+```
+
+También admite `targets` con varias profesiones.
+
+### COMPLETE_EVENT
+
+```yaml
+type: COMPLETE_EVENT
+event: ECLIPSE_LUNAR
+amount: 1
+```
+
+Se reporta mediante la API o `/mdvquest event`.
+
+### PLAYER_KILL
+
+```yaml
+type: PLAYER_KILL
+amount: 3
+unique-victims: true
+worlds: [world]
+```
+
+También aplica las protecciones globales de `anti-exploit.pvp`.
+
+## Recompensas
+
+### Experiencia MMOCore
+
+```yaml
+experience:
+  - profession: main
+    amount: 500
+  - profession: minero
+    amount: 250
+```
+
+El comando se define en:
+
+```yaml
+rewards:
+  mmocore-experience-command: 'mmocore admin exp give %player% %profession% %amount% false'
+```
+
+### Objetos vanilla
+
+```yaml
+vanilla-items:
+  - material: DIAMOND
+    amount: 2
+```
+
+### MMOItems
+
+```yaml
+mmoitems:
+  - type: MATERIAL
+    id: COFRE_T2
+    amount: 1
+```
+
+### MythicMobs / Crucible
+
+```yaml
+mythic-items:
+  - id: RECOMPENSA_CRUCIBLE
+    amount: 1
+```
+
+El editor identifica el ID a partir del objeto depositado y el reclamo vuelve a construirlo mediante el ItemManager de Mythic.
+
+### Objetos exactos
+
+`exact-items` es generado por el editor cuando un objeto con meta no pertenece a MMOItems ni Mythic. Bukkit lo serializa dentro del YAML para conservar nombre, lore, modelo y demás metadatos compatibles.
+
+### Comandos
+
+```yaml
+commands:
+  - 'eco give %player% 500'
+  - 'say %player% completó %mission%'
+```
+
+Placeholders propios: `%player%`, `%uuid%`, `%mission%` y `%rotation%`.
+
+## Rotaciones reales
 
 ```yaml
 rotations:
@@ -88,4 +363,22 @@ rotations:
     seed: 'mdvquest-three-days'
 ```
 
-La selección es global, ponderada por `weight`, sin repetir una definición dentro del mismo ciclo. Si hay menos candidatas que `mission-count`, usa todas las disponibles.
+- `duration-days`: de 1 a 7 en V1.
+- `mission-count`: cuántas definiciones globales se seleccionan en cada ciclo.
+- `anchor-date` y `reset-time`: fijan los límites de los ciclos en la zona horaria configurada.
+- `seed`: hace que la selección sea estable tras reinicios.
+
+Si hay menos candidatas habilitadas que `mission-count`, se usan todas.
+
+## Cabeza de volver
+
+```yaml
+menus:
+  back-head-texture: ''
+```
+
+Acepta una URL de `textures.minecraft.net` o un Value Base64 que contenga esa URL.
+
+## Compatibilidad con configuraciones 1.0.x
+
+Las recompensas antiguas con `commands`, `vanilla-items` y `mmoitems` siguen siendo válidas. No hace falta convertirlas para arrancar 1.1.0.

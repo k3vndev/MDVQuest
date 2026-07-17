@@ -49,6 +49,24 @@ public final class MDVQuestCommand implements CommandExecutor, TabCompleter {
         }
 
         switch (sub) {
+            case "admin", "gestionar" -> {
+                if (!(sender instanceof Player player)) {
+                    sender.sendMessage("El editor visual solo puede abrirse dentro del juego.");
+                    return true;
+                }
+                if (args.length >= 2 && (args[1].equalsIgnoreCase("crear") || args[1].equalsIgnoreCase("new"))) {
+                    plugin.getEditorManager().openDurationPicker(player);
+                } else {
+                    plugin.getEditorManager().openAdminCatalog(player);
+                }
+            }
+            case "crear", "editor", "new" -> {
+                if (!(sender instanceof Player player)) {
+                    sender.sendMessage("El editor visual solo puede abrirse dentro del juego.");
+                    return true;
+                }
+                plugin.getEditorManager().openDurationPicker(player);
+            }
             case "reload" -> {
                 plugin.reloadPlugin();
                 plugin.message(sender, "reload", Map.of());
@@ -127,6 +145,8 @@ public final class MDVQuestCommand implements CommandExecutor, TabCompleter {
 
     private void help(CommandSender sender) {
         sender.sendMessage(ColorUtil.color("&e/mdvquest &7- abre el menu"));
+        sender.sendMessage(ColorUtil.color("&e/mdvquest admin &7- catálogo y editor visual"));
+        sender.sendMessage(ColorUtil.color("&e/mdvquest crear &7- crea una misión"));
         sender.sendMessage(ColorUtil.color("&e/mdvquest reload"));
         sender.sendMessage(ColorUtil.color("&e/mdvquest status"));
         sender.sendMessage(ColorUtil.color("&e/mdvquest rotate <rotacion>"));
@@ -143,7 +163,8 @@ public final class MDVQuestCommand implements CommandExecutor, TabCompleter {
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (!sender.hasPermission("mdvquest.admin")) return Collections.emptyList();
-        if (args.length == 1) return filter(List.of("reload", "status", "rotate", "event", "profexp", "report"), args[0]);
+        if (args.length == 1) return filter(List.of("admin", "crear", "reload", "status", "rotate", "event", "profexp", "report"), args[0]);
+        if (args.length == 2 && args[0].equalsIgnoreCase("admin")) return filter(List.of("crear"), args[1]);
         if (args.length == 2 && (args[0].equalsIgnoreCase("event") || args[0].equalsIgnoreCase("profexp") || args[0].equalsIgnoreCase("report"))) {
             return filter(Bukkit.getOnlinePlayers().stream().map(Player::getName).toList(), args[1]);
         }

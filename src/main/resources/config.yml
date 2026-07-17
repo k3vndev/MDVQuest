@@ -1,5 +1,5 @@
 # ==========================================================
-# MDVQuest 1.0.1 - Misiones individuales globales
+# MDVQuest 1.1.0 - Misiones individuales globales + editor visual
 # Los dias son dias REALES, no dias de Minecraft.
 # ==========================================================
 
@@ -37,7 +37,7 @@ rotations:
     seed: "mdvquest-two-days"
 
   three-days:
-    enabled: false
+    enabled: true
     duration-days: 3
     mission-count: 1
     anchor-date: "2026-01-01"
@@ -53,7 +53,7 @@ rotations:
     seed: "mdvquest-four-days"
 
   five-days:
-    enabled: false
+    enabled: true
     duration-days: 5
     mission-count: 1
     anchor-date: "2026-01-01"
@@ -61,7 +61,7 @@ rotations:
     seed: "mdvquest-five-days"
 
   six-days:
-    enabled: false
+    enabled: true
     duration-days: 6
     mission-count: 1
     anchor-date: "2026-01-01"
@@ -77,6 +77,8 @@ rotations:
     seed: "mdvquest-weekly"
 
 menus:
+  # Puede ser URL directa de textures.minecraft.net o Value Base64 de Minecraft-Heads.
+  back-head-texture: ""
   title: "&8Misiones"
   detail-title: "&8Mision: %mission%"
   size: 54
@@ -85,7 +87,7 @@ menus:
 
 mdvsocial:
   enabled: true
-  auto-install-main-button: true
+  auto-install-main-button: false
   main-menu-id: "main"
   button-id: "misiones"
   button-slot: 10
@@ -95,6 +97,18 @@ mdvsocial:
     - "&7Consulta tus encargos activos."
     - "&7El progreso es automatico."
     - "&eClick para abrir."
+
+
+rewards:
+  # Se ejecuta desde consola para experiencia main y de profesiones.
+  mmocore-experience-command: "mmocore admin exp give %player% %profession% %amount% false"
+
+editor:
+  # El editor se abre con /mdvquest admin o /mdvquest crear.
+  # Las respuestas guiadas se escriben en chat; "cancelar" vuelve sin aplicar el paso.
+  enabled: true
+  # El menú de detalle reserva una fila completa para los objetivos.
+  max-objectives-per-mission: 9
 
 anti-exploit:
   placed-blocks:
@@ -121,6 +135,7 @@ messages:
   mission-claimed: "&aRecompensa reclamada: &f%mission%"
   mission-expired: "&cLa mision ya expiro. La recompensa se perdio."
   already-claimed: "&cYa reclamaste esta recompensa."
+  inventory-slots-needed: "&cDebes liberar &f%slots% slot(s) &cpara recibir la recompensa completa. Esta recompensa ocupa &f%required% slot(s)&c."
   not-completed: "&cTodavia no completaste todos los objetivos."
   delivery-none: "&cNo tienes objetos validos para entregar."
   delivery-progress: "&aEntregaste &f%amount%&a. Progreso: &f%progress%/%required%"
