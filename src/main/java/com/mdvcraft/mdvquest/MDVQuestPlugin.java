@@ -89,7 +89,7 @@ public final class MDVQuestPlugin extends JavaPlugin {
             for (Player player : Bukkit.getOnlinePlayers()) progressService.preload(player);
             scheduleTasks();
             new MDVSocialMenuInstaller(this).installIfNeeded();
-            getLogger().info("MDVQuest 1.0.0 habilitado. Definiciones: " + definitions + ", activas: " + rotationService.activeInstances().size());
+            getLogger().info("MDVQuest " + getDescription().getVersion() + " habilitado. Definiciones: " + definitions + ", activas: " + rotationService.activeInstances().size());
         } catch (Exception ex) {
             getLogger().severe("No se pudo iniciar MDVQuest: " + ex.getMessage());
             ex.printStackTrace();

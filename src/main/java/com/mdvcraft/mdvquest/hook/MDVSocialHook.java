@@ -66,7 +66,7 @@ public final class MDVSocialHook {
         if (meta != null) {
             meta.setDisplayName(ColorUtil.color(name));
             meta.setLore(ColorUtil.color(lore == null ? new ArrayList<>() : lore));
-            item.setItemMeta(meta);
+            if (!item.setItemMeta(meta)) return item;
         }
         return item;
     }

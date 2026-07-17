@@ -13,6 +13,7 @@ import com.mdvcraft.mdvquest.util.TimeUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -21,6 +22,7 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
@@ -93,7 +95,11 @@ public final class QuestMenuManager implements Listener {
         inventory.setItem(size - 4, actionItem(Material.BARRIER, "&cCerrar", List.of(), "CLOSE", null, null, page));
 
         sessions.put(player.getUniqueId(), new MenuSession(inventory, MenuType.MAIN, page, null));
-        player.openInventory(inventory);
+        InventoryView openedView = player.openInventory(inventory);
+        if (openedView == null) {
+            sessions.remove(player.getUniqueId());
+            return;
+        }
         plugin.getSocialHook().sound(player, "open");
     }
 
@@ -126,7 +132,11 @@ public final class QuestMenuManager implements Listener {
         inventory.setItem(53, actionItem(Material.BARRIER, "&cCerrar", List.of(), "CLOSE", null, null, 1));
 
         sessions.put(player.getUniqueId(), new MenuSession(inventory, MenuType.DETAIL, 1, instance.id()));
-        player.openInventory(inventory);
+        InventoryView openedView = player.openInventory(inventory);
+        if (openedView == null) {
+            sessions.remove(player.getUniqueId());
+            return;
+        }
         plugin.getSocialHook().sound(player, "open");
     }
 
@@ -188,13 +198,14 @@ public final class QuestMenuManager implements Listener {
         if (instanceId != null) pdc.set(instanceKey, PersistentDataType.STRING, instanceId);
         if (objectiveId != null) pdc.set(objectiveKey, PersistentDataType.STRING, objectiveId);
         pdc.set(pageKey, PersistentDataType.INTEGER, page);
-        item.setItemMeta(meta);
+        if (!item.setItemMeta(meta)) return item;
         return item;
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onClick(InventoryClickEvent event) {
-        if (!(event.getWhoClicked() instanceof Player player)) return;
+        HumanEntity clicker = event.getWhoClicked();
+        if (!(clicker instanceof Player player)) return;
         MenuSession session = sessions.get(player.getUniqueId());
         if (session == null || !event.getView().getTopInventory().equals(session.inventory())) return;
         if (event.getRawSlot() < 0 || event.getRawSlot() >= session.inventory().getSize()) return;
@@ -246,7 +257,8 @@ public final class QuestMenuManager implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onDrag(InventoryDragEvent event) {
-        if (!(event.getWhoClicked() instanceof Player player)) return;
+        HumanEntity clicker = event.getWhoClicked();
+        if (!(clicker instanceof Player player)) return;
         MenuSession session = sessions.get(player.getUniqueId());
         if (session == null || !event.getView().getTopInventory().equals(session.inventory())) return;
         if (event.getRawSlots().stream().anyMatch(slot -> slot < session.inventory().getSize())) event.setCancelled(true);
@@ -254,7 +266,8 @@ public final class QuestMenuManager implements Listener {
 
     @EventHandler
     public void onClose(InventoryCloseEvent event) {
-        if (!(event.getPlayer() instanceof Player player)) return;
+        HumanEntity viewer = event.getPlayer();
+        if (!(viewer instanceof Player player)) return;
         MenuSession session = sessions.get(player.getUniqueId());
         if (session != null && event.getInventory().equals(session.inventory())) sessions.remove(player.getUniqueId());
     }

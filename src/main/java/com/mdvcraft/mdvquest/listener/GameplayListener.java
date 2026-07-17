@@ -11,6 +11,7 @@ import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.block.data.Ageable;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
@@ -32,10 +33,12 @@ import org.bukkit.event.player.PlayerItemConsumeEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.CraftingInventory;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.Recipe;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.projectiles.ProjectileSource;
 import org.bukkit.Tag;
 
 import java.util.HashMap;
@@ -137,15 +140,19 @@ public final class GameplayListener implements Listener {
         if (!(victim.getLastDamageCause() instanceof EntityDamageByEntityEvent damage)) return false;
         Entity damager = damage.getDamager();
         if (damager instanceof Player player) return player.getUniqueId().equals(killer.getUniqueId());
-        if (damager instanceof Projectile projectile && projectile.getShooter() instanceof Player shooter) {
-            return shooter.getUniqueId().equals(killer.getUniqueId());
+        if (damager instanceof Projectile projectile) {
+            ProjectileSource source = projectile.getShooter();
+            if (source instanceof Player shooter) {
+                return shooter.getUniqueId().equals(killer.getUniqueId());
+            }
         }
         return false;
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onVanillaCraft(CraftItemEvent event) {
-        if (!(event.getWhoClicked() instanceof Player player)) return;
+        HumanEntity clicker = event.getWhoClicked();
+        if (!(clicker instanceof Player player)) return;
         Recipe recipe = event.getRecipe();
         if (recipe instanceof Keyed keyed && keyed.getKey().getNamespace().equalsIgnoreCase("mdvrecetas")) return;
         ItemStack result = recipe == null ? null : recipe.getResult();
@@ -158,7 +165,8 @@ public final class GameplayListener implements Listener {
 
     private int estimateCraftOperations(CraftItemEvent event) {
         if (!event.isShiftClick()) return 1;
-        if (!(event.getInventory() instanceof CraftingInventory crafting)) return 1;
+        Inventory sourceInventory = event.getInventory();
+        if (!(sourceInventory instanceof CraftingInventory crafting)) return 1;
         int min = Integer.MAX_VALUE;
         for (ItemStack item : crafting.getMatrix()) {
             if (item == null || item.getType().isAir()) continue;
