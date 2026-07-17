@@ -1,0 +1,36 @@
+name: Build MDVQuest
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Compilar con Maven y Paper oficial
+        run: mvn -B -U clean package
+
+      - name: Verificar firmas Bukkit/Paper
+        run: bash scripts/verify-bytecode.sh target/MDVQuest-1.0.2.jar
+
+      - name: Publicar JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: MDVQuest-1.0.2
+          path: target/MDVQuest-1.0.2.jar
+          if-no-files-found: error
