@@ -1,4 +1,4 @@
-# Configuración de MDVQuest 1.2.3
+# Configuración de MDVQuest 1.2.4
 
 Las misiones se leen desde todos los archivos `.yml` ubicados en:
 
@@ -452,7 +452,7 @@ Acepta una URL de `textures.minecraft.net` o un Value Base64 que contenga esa UR
 
 ## Compatibilidad con configuraciones 1.0.x
 
-Las recompensas antiguas con `commands`, `vanilla-items` y `mmoitems` siguen siendo válidas. No hace falta convertirlas para arrancar 1.2.3.
+Las recompensas antiguas con `commands`, `vanilla-items` y `mmoitems` siguen siendo válidas. No hace falta convertirlas para arrancar 1.2.4.
 
 
 ## Personalización de los menús públicos
@@ -511,4 +511,4 @@ safety:
   sanitize-example-economy-rewards: true
 ```
 
-Esta migración se ejecuta una vez sobre `missions/examples.yml`, reemplazando sus recompensas por EXP principal baja y hierro. No modifica otros archivos. Desactívala antes del primer arranque de 1.2.3 si reutilizas `examples.yml` como archivo de producción y no quieres que sea saneado.
+Esta migración se ejecuta una vez sobre `missions/examples.yml`, reemplazando sus recompensas por EXP principal baja y hierro. No modifica otros archivos. Desactívala antes del primer arranque de 1.2.4 si reutilizas `examples.yml` como archivo de producción y no quieres que sea saneado.

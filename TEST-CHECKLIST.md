@@ -1,11 +1,11 @@
-# Checklist de staging — MDVQuest 1.2.3
+# Checklist de staging — MDVQuest 1.2.4
 
 Prueba esta versión en una copia de Purpur 1.21.6 antes de producción.
 
 ## Arranque y migración
 
 - [ ] El servidor inicia sin `NoSuchMethodError`.
-- [ ] `/mdvquest status` muestra versión 1.2.3.
+- [ ] `/mdvquest status` muestra versión 1.2.4.
 - [ ] Las misiones y el progreso existentes de 1.2.0 permanecen.
 - [ ] `/mdvquest` abre el menú público.
 - [ ] `/mdvquest admin` exige `mdvquest.admin`.
@@ -114,17 +114,20 @@ Prueba esta versión en una copia de Purpur 1.21.6 antes de producción.
 - [ ] El guardado periódico no produce picos perceptibles.
 - [ ] Una rotación expirada elimina su progreso y recompensas no reclamadas.
 
-## Editor de recompensas 1.2.3
+## Editor de recompensas 1.2.4
 
-- [ ] Editar una misión con recompensas existentes: deben aparecer en los slots 9–44, no en el slot 0.
-- [ ] Mover recompensas entre slots y modificar cantidades con clics normales.
+- [ ] Abrir el editor sin recompensas: todos los slots 9–44 deben estar vacíos, sin paneles negros/grises.
+- [ ] Editar una misión con recompensas existentes: deben aparecer dentro de los slots 9–44, no en el slot 0.
+- [ ] Mover recompensas entre slots y modificar cantidades con clic izquierdo, derecho y arrastre.
+- [ ] Hacer Shift-click sobre un objeto del inventario: debe entrar únicamente en la cuadrícula editable.
+- [ ] Hacer Shift-click sobre una plantilla real en la cuadrícula: debe volver al inventario.
+- [ ] Hacer Shift-click sobre una recompensa virtual existente: debe eliminarse sin entregar una copia al administrador.
 - [ ] Añadir un objeto vanilla, MMOItem y Mythic/Crucible desde el inventario.
-- [ ] Eliminar una recompensa con Shift + clic derecho.
-- [ ] Guardar: la cuadrícula reemplaza las recompensas físicas anteriores sin duplicarlas.
+- [ ] Guardar: la cuadrícula reemplaza las recompensas físicas anteriores sin paneles ni duplicados.
 - [ ] Cancelar o cerrar: los objetos usados como plantilla vuelven al inventario y no se obtienen copias virtuales.
 - [ ] La EXP y los comandos configurados permanecen sin cambios.
 
-## Movimiento entre YAML 1.2.3
+## Movimiento entre YAML 1.2.4
 
 - [ ] Mover una misión cuyo ID original contiene `_` a otro YAML.
 - [ ] Confirmar que desaparece del archivo anterior y aparece una sola vez en el nuevo.

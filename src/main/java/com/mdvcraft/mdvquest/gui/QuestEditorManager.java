@@ -288,13 +288,18 @@ public final class QuestEditorManager implements Listener {
         QuestDraft draft = drafts.get(player.getUniqueId());
         if (draft == null) { openDurationPicker(player); return; }
         Inventory inventory = plugin.getSocialHook().createInventory(null, "&8Recompensas de objetos", 54, true);
+        // MDVSocial rellena el inventario con paneles decorativos. La cuadrícula de
+        // recompensas debe quedar realmente vacía para poder editarla libremente.
+        for (int slot : DEPOSIT_SLOTS) inventory.setItem(slot, null);
+
         inventory.setItem(4, item(Material.CHEST, "&eEditor de recompensas", List.of(
                 "&7Los objetos de la cuadrícula representan",
                 "&7la recompensa final de la misión.",
                 "",
                 "&7Puedes moverlos, cambiar cantidades,",
                 "&7quitarlos o añadir otros desde tu inventario.",
-                "&7Shift + click derecho elimina un objeto.",
+                "&7Shift-click desde tu inventario los añade.",
+                "&7Shift-click en la cuadrícula los retira.",
                 "&7Los objetos usados como plantilla se devuelven."),
                 "NONE", -1, 1, null, null, null));
 
@@ -438,35 +443,50 @@ public final class QuestEditorManager implements Listener {
             event.setCancelled(true);
             return;
         }
-        if (raw < session.inventory().getSize() && isDepositSlot(raw)
-                && event.isShiftClick() && event.isRightClick()) {
-            event.setCancelled(true);
-            ItemStack removed = event.getCurrentItem();
-            if (removed == null || removed.getType().isAir()) return;
-            session.inventory().setItem(raw, null);
-            if (!isVirtualReward(removed)) {
-                Map<Integer, ItemStack> leftovers = player.getInventory().addItem(removed);
-                for (ItemStack leftover : leftovers.values()) {
-                    player.getWorld().dropItemNaturally(player.getLocation(), leftover);
-                }
+
+        int topSize = session.inventory().getSize();
+        boolean clickedTop = raw < topSize;
+
+        if (clickedTop && isDepositSlot(raw)) {
+            // Shift-click sobre la cuadrícula: elimina una recompensa virtual o
+            // devuelve al inventario una plantilla real depositada por el admin.
+            if (event.isShiftClick()) {
+                event.setCancelled(true);
+                removeRewardGridItem(player, session.inventory(), raw);
+                return;
+            }
+
+            // Evita sacar una vista virtual mediante teclas de la hotbar/creativo o
+            // recolectarla junto con objetos reales. Los clicks normales y el drag
+            // permanecen libres dentro de la cuadrícula.
+            if (event.getClick().isKeyboardClick()
+                    || event.getClick().isCreativeAction()
+                    || event.getAction() == InventoryAction.COLLECT_TO_CURSOR) {
+                event.setCancelled(true);
             }
             return;
         }
-        boolean unsafeMove = event.isShiftClick()
-                || event.getClick().isKeyboardClick()
-                || event.getClick().isCreativeAction()
-                || event.getAction() == InventoryAction.COLLECT_TO_CURSOR;
-        if (unsafeMove) {
-            event.setCancelled(true);
-            return;
-        }
-        if (raw >= session.inventory().getSize()) {
+
+        if (!clickedTop) {
+            // Shift-click desde el inventario del jugador: mueve el stack hacia los
+            // slots editables sin permitir que Bukkit lo mande a botones del menú.
+            if (event.isShiftClick()) {
+                event.setCancelled(true);
+                ItemStack source = event.getCurrentItem();
+                if (source == null || source.getType().isAir() || isVirtualReward(source)) return;
+                event.setCurrentItem(moveIntoRewardGrid(session.inventory(), source));
+                return;
+            }
+
+            // Una recompensa virtual es solo una representación editable; nunca
+            // puede colocarse en el inventario real del administrador.
             if (isVirtualReward(event.getCursor()) || isVirtualReward(event.getCurrentItem())) {
                 event.setCancelled(true);
             }
             return;
         }
-        if (isDepositSlot(raw)) return; // Permite colocar, retirar, mover y cambiar cantidades manualmente.
+
+        // El resto de los slots superiores son botones/decoración del editor.
         event.setCancelled(true);
         ItemStack clicked = event.getCurrentItem();
         if (clicked == null || !clicked.hasItemMeta()) return;
@@ -491,6 +511,60 @@ public final class QuestEditorManager implements Listener {
                 openRewardItems(player);
             }
         }
+    }
+
+    private void removeRewardGridItem(Player player, Inventory inventory, int slot) {
+        ItemStack removed = inventory.getItem(slot);
+        if (removed == null || removed.getType().isAir()) return;
+        inventory.setItem(slot, null);
+
+        // Las recompensas ya configuradas son vistas virtuales: quitarlas de la
+        // cuadrícula solo significa eliminarlas del borrador, no regalarlas.
+        if (isVirtualReward(removed)) return;
+
+        Map<Integer, ItemStack> leftovers = player.getInventory().addItem(removed);
+        if (leftovers.isEmpty()) return;
+
+        // Si el inventario está lleno, el objeto permanece en la cuadrícula en vez
+        // de caer al suelo o perderse. Un único slot nunca produce más de un stack.
+        inventory.setItem(slot, leftovers.values().iterator().next());
+    }
+
+    private ItemStack moveIntoRewardGrid(Inventory inventory, ItemStack source) {
+        ItemStack remaining = source.clone();
+
+        // Primero combina únicamente con plantillas reales. No se combina con una
+        // vista virtual porque eso haría que el plugin no devolviera la parte real.
+        for (int slot : DEPOSIT_SLOTS) {
+            ItemStack existing = inventory.getItem(slot);
+            if (existing == null || existing.getType().isAir() || isVirtualReward(existing)) continue;
+            if (!existing.isSimilar(remaining)) continue;
+
+            int maximum = Math.min(existing.getMaxStackSize(), inventory.getMaxStackSize());
+            int room = maximum - existing.getAmount();
+            if (room <= 0) continue;
+
+            int moved = Math.min(room, remaining.getAmount());
+            existing.setAmount(existing.getAmount() + moved);
+            inventory.setItem(slot, existing);
+            remaining.setAmount(remaining.getAmount() - moved);
+            if (remaining.getAmount() <= 0) return null;
+        }
+
+        // Después usa los slots realmente vacíos de la cuadrícula.
+        for (int slot : DEPOSIT_SLOTS) {
+            ItemStack existing = inventory.getItem(slot);
+            if (existing != null && !existing.getType().isAir()) continue;
+
+            int moved = Math.min(remaining.getAmount(), remaining.getMaxStackSize());
+            ItemStack placed = remaining.clone();
+            placed.setAmount(moved);
+            inventory.setItem(slot, placed);
+            remaining.setAmount(remaining.getAmount() - moved);
+            if (remaining.getAmount() <= 0) return null;
+        }
+
+        return remaining;
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)

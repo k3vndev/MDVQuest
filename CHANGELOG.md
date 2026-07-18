@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.2.4
+
+- Corregida la cuadrícula del editor de recompensas: los slots 9–44 quedan realmente vacíos aunque MDVSocial rellene el inventario con paneles.
+- Los paneles decorativos ya no pueden moverse ni guardarse accidentalmente como recompensas.
+- Shift-click desde el inventario del administrador mueve objetos únicamente a los slots editables de recompensas.
+- Shift-click sobre una recompensa existente la elimina del borrador; sobre una plantilla real la devuelve al inventario.
+- Se mantienen libres los clicks normales, click derecho y arrastre dentro de la cuadrícula para mover, dividir, combinar y modificar cantidades.
+- Las recompensas existentes continúan siendo vistas virtuales para impedir que el editor permita obtener objetos gratis.
+- No hay cambios de config, YAML de misiones ni SQLite.
+
 ## 1.2.3
 
 - Corregido el editor de recompensas físicas: las recompensas existentes ya no aparecen bloqueadas en el slot 0.
