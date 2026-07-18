@@ -45,11 +45,12 @@ import java.util.UUID;
 public final class QuestMenuManager implements Listener {
     private static final int[] DEFAULT_CATEGORY_SLOTS = {9, 18, 27, 36};
     private static final int[] DEFAULT_MISSION_SLOTS = {
-            10,11,12,13,14,15,16,17,
-            19,20,21,22,23,24,25,26,
-            28,29,30,31,32,33,34,35,
-            37,38,39,40,41,42,43,44
+            11,12,13,14,15,16,17,
+            20,21,22,23,24,25,26,
+            29,30,31,32,33,34,35,
+            38,39,40,41,42,43,44
     };
+    private static final int[] DEFAULT_SEPARATOR_SLOTS = {10, 19, 28, 37};
     private static final int[] DEFAULT_OBJECTIVE_SLOTS = {10,11,12,13,14,15,16};
     private static final int[] DEFAULT_REWARD_SLOTS = {29,30,31,32,33};
     private static final int[] DEFAULT_REWARD_BORDER_SLOTS = {
@@ -109,7 +110,10 @@ public final class QuestMenuManager implements Listener {
 
         List<MissionInstance> filtered = all.stream()
                 .filter(instance -> group.accepts(plugin.getRegistry().durationDays(instance.definition())))
-                .sorted(Comparator.comparingLong(MissionInstance::expiresAt).thenComparing(i -> i.definition().id()))
+                .sorted(Comparator
+                        .comparingInt((MissionInstance i) -> i.accessTier().level())
+                        .thenComparingLong(MissionInstance::expiresAt)
+                        .thenComparing(i -> i.definition().id()))
                 .toList();
 
         int pages = Math.max(1, (int) Math.ceil(filtered.size() / (double) missionSlots.length));
@@ -130,6 +134,14 @@ public final class QuestMenuManager implements Listener {
             long completed = categoryMissions.stream().filter(instance -> progress.isMissionComplete(player, instance)).count();
             long nextReset = nextResetAt(option, now);
             inventory.setItem(slot, categoryItem(option, option == group, completed, categoryMissions.size(), nextReset, now));
+        }
+
+        int[] separatorSlots = slots("menus.main.separator-slots", DEFAULT_SEPARATOR_SLOTS);
+        for (int i = 0; i < separatorSlots.length && i < groups.length; i++) {
+            int slot = separatorSlots[i];
+            if (!validSlot(slot, size)) continue;
+            boolean selected = groups[i] == group;
+            inventory.setItem(slot, separatorItem(selected));
         }
 
         int start = (page - 1) * missionSlots.length;
@@ -268,6 +280,18 @@ public final class QuestMenuManager implements Listener {
         return item;
     }
 
+    private ItemStack separatorItem(boolean selected) {
+        Material material = material(selected
+                        ? "menus.main.separator.selected-material"
+                        : "menus.main.separator.material",
+                selected ? Material.PURPLE_STAINED_GLASS_PANE : Material.BROWN_STAINED_GLASS_PANE);
+        String name = text(selected
+                        ? "menus.main.separator.selected-name"
+                        : "menus.main.separator.name",
+                " ", Map.of());
+        return actionItem(material, name, List.of(), "NONE", null, null, 1, null);
+    }
+
     private ItemStack missionItem(Player player, MissionInstance instance, long now) {
         boolean complete = progress.isMissionComplete(player, instance);
         boolean claimed = progress.claimed(player, instance);
@@ -306,6 +330,17 @@ public final class QuestMenuManager implements Listener {
                     "%state%&f%objective% &7(%progress%/%required%)", values)));
         }
         appendRewardLore(lore, instance.definition().rewards());
+        if (!locked && instance.accessTier() != com.mdvcraft.mdvquest.model.AccessTier.NORMAL) {
+            lore.add(Component.empty());
+            lore.add(ItemDisplayUtil.legacy(text("menus.main.access." + instance.accessTier().key() + "-line",
+                    instance.accessTier() == com.mdvcraft.mdvquest.model.AccessTier.VIP1
+                            ? "&b● Misión VIP"
+                            : "&e● Misión VIP 2", Map.of(
+                            "rank", access.displayName(instance.accessTier()),
+                            "permission", access.permission(instance.accessTier()),
+                            "pool", instance.accessTier().key()
+                    ))));
+        }
         if (locked) {
             lore.add(Component.empty());
             lore.add(ItemDisplayUtil.legacy(text("menus.main.access.locked-line",

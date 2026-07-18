@@ -1,5 +1,5 @@
 # ==========================================================
-# MDVQuest 1.2.1 - Misiones individuales globales + editor visual
+# MDVQuest 1.2.2 - Misiones individuales globales + editor visual
 # Los dias son dias REALES, no dias de Minecraft.
 # ==========================================================
 
@@ -142,15 +142,24 @@ menus:
     title: "&8Misiones"
     size: 54
     category-slots: [9, 18, 27, 36]
-    mission-slots: [10,11,12,13,14,15,16,17,19,20,21,22,23,24,25,26,28,29,30,31,32,33,34,35,37,38,39,40,41,42,43,44]
+    separator-slots: [10, 19, 28, 37]
+    mission-slots: [11,12,13,14,15,16,17,20,21,22,23,24,25,26,29,30,31,32,33,34,35,38,39,40,41,42,43,44]
     previous-page-slot: 45
     back-slot: 49
     next-page-slot: 53
     selected-category-glow: true
 
+    separator:
+      material: BROWN_STAINED_GLASS_PANE
+      selected-material: PURPLE_STAINED_GLASS_PANE
+      name: " "
+      selected-name: " "
+
     access:
       # Se muestra a jugadores que pueden progresar la misión, pero todavía no pueden reclamarla.
       locked-line: "&b● Necesitas el rango &f%rank% &bpara reclamar la recompensa de esta misión."
+      vip1-line: "&b● Misión VIP"
+      vip2-line: "&e● Misión VIP 2"
 
     back-button:
       name: "&eVolver"

@@ -1,11 +1,11 @@
-# Checklist de staging — MDVQuest 1.2.1
+# Checklist de staging — MDVQuest 1.2.2
 
 Prueba esta versión en una copia de Purpur 1.21.6 antes de producción.
 
 ## Arranque y migración
 
 - [ ] El servidor inicia sin `NoSuchMethodError`.
-- [ ] `/mdvquest status` muestra versión 1.2.1.
+- [ ] `/mdvquest status` muestra versión 1.2.2.
 - [ ] Las misiones y el progreso existentes de 1.2.0 permanecen.
 - [ ] `/mdvquest` abre el menú público.
 - [ ] `/mdvquest admin` exige `mdvquest.admin`.
