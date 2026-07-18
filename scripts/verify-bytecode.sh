@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-JAR="${1:-target/MDVQuest-1.2.0.jar}"
+JAR="${1:-target/MDVQuest-1.2.1.jar}"
 if [[ ! -f "$JAR" ]]; then
   echo "No existe el JAR: $JAR" >&2
   exit 1

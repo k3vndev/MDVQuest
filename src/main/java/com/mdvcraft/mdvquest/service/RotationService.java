@@ -131,6 +131,43 @@ public final class RotationService {
         return true;
     }
 
+    /**
+     * Inserta una definición concreta en su ciclo global actual sin regenerar la rotación
+     * ni borrar progreso existente. También admite definiciones deshabilitadas para pruebas.
+     */
+    public synchronized ForceResult forceMission(String definitionId, long now) throws SQLException {
+        MissionDefinition definition = registry.mission(definitionId);
+        if (definition == null) return new ForceResult(ForceStatus.NOT_FOUND, null);
+
+        RotationDefinition rotation = registry.rotation(definition.rotation());
+        if (rotation == null) return new ForceResult(ForceStatus.ROTATION_NOT_FOUND, null);
+        if (!rotation.enabled()) return new ForceResult(ForceStatus.ROTATION_DISABLED, null);
+
+        Window window = window(rotation, now);
+        currentCycleByRotation.put(rotation.id(), window.cycleKey());
+
+        for (MissionInstance instance : active.values()) {
+            if (instance.cycleKey().equals(window.cycleKey())
+                    && instance.definition().id().equals(definition.id())) {
+                return new ForceResult(ForceStatus.ALREADY_ACTIVE, instance);
+            }
+        }
+
+        AccessTier tier = definition.accessTier();
+        String id = window.cycleKey() + ":" + tier.key() + ":" + definition.id();
+        MissionInstance instance = new MissionInstance(
+                id, window.cycleKey(), rotation.id(), tier, definition,
+                window.startsAt(), window.expiresAt()
+        );
+        database.insertInstances(List.of(instance));
+        active.put(instance.id(), instance);
+        emptyPools.remove(poolKey(window.cycleKey(), tier));
+        sortActive();
+        plugin.getLogger().info("Mision forzada globalmente: " + definition.id()
+                + " [" + rotation.id() + "/" + tier.key() + "]");
+        return new ForceResult(ForceStatus.ADDED, instance);
+    }
+
     private List<MissionInstance> generatePool(RotationDefinition rotation, Window window, AccessTier generatedTier,
                                                Set<String> excludedDefinitions, String extraSeed) {
         Set<AccessTier> allowedDefinitionPools = switch (generatedTier) {
@@ -240,6 +277,17 @@ public final class RotationService {
     public synchronized Collection<String> currentCycles() {
         return List.copyOf(currentCycleByRotation.values());
     }
+
+    public enum ForceStatus {
+        ADDED,
+        ALREADY_ACTIVE,
+        NOT_FOUND,
+        ROTATION_NOT_FOUND,
+        ROTATION_DISABLED,
+        DATABASE_ERROR
+    }
+
+    public record ForceResult(ForceStatus status, MissionInstance instance) { }
 
     public record Window(long startsAt, long expiresAt, String cycleKey) { }
 }

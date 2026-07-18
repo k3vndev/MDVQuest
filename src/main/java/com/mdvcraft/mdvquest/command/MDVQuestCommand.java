@@ -4,6 +4,7 @@ import com.mdvcraft.mdvquest.MDVQuestPlugin;
 import com.mdvcraft.mdvquest.hook.MMOItemsHook;
 import com.mdvcraft.mdvquest.model.MissionInstance;
 import com.mdvcraft.mdvquest.model.ObjectiveType;
+import com.mdvcraft.mdvquest.service.RotationService;
 import com.mdvcraft.mdvquest.util.ColorUtil;
 import com.mdvcraft.mdvquest.util.TimeUtil;
 import org.bukkit.Bukkit;
@@ -72,6 +73,7 @@ public final class MDVQuestCommand implements CommandExecutor, TabCompleter {
                 plugin.message(sender, "reload", Map.of());
             }
             case "status" -> showStatus(sender);
+            case "force", "forzar" -> handleForce(sender, args);
             case "rotate", "reroll" -> handleReroll(sender, args);
             case "event" -> reportBridge(sender, args, ObjectiveType.COMPLETE_EVENT);
             case "profexp" -> reportBridge(sender, args, ObjectiveType.EARN_PROFESSION_EXP);
@@ -79,6 +81,43 @@ public final class MDVQuestCommand implements CommandExecutor, TabCompleter {
             default -> help(sender);
         }
         return true;
+    }
+
+    private void handleForce(CommandSender sender, String[] args) {
+        if (!sender.hasPermission("mdvquest.admin.force")) {
+            plugin.message(sender, "no-permission", Map.of());
+            return;
+        }
+        if (args.length < 2) {
+            sender.sendMessage(ColorUtil.color("&e/mdvquest force <id-de-mision>"));
+            return;
+        }
+
+        RotationService.ForceResult result = plugin.forceMission(args[1]);
+        MissionInstance instance = result.instance();
+        switch (result.status()) {
+            case ADDED -> plugin.message(sender, "force-mission-success", Map.of(
+                    "mission", instance.definition().id(),
+                    "rotation", instance.rotationId(),
+                    "remaining", TimeUtil.remaining(instance.expiresAt(), System.currentTimeMillis())
+            ));
+            case ALREADY_ACTIVE -> plugin.message(sender, "force-mission-already-active", Map.of(
+                    "mission", instance.definition().id(),
+                    "rotation", instance.rotationId()
+            ));
+            case ROTATION_DISABLED -> plugin.message(sender, "force-mission-rotation-disabled", Map.of(
+                    "mission", args[1]
+            ));
+            case ROTATION_NOT_FOUND -> plugin.message(sender, "force-mission-rotation-missing", Map.of(
+                    "mission", args[1]
+            ));
+            case NOT_FOUND -> plugin.message(sender, "force-mission-not-found", Map.of(
+                    "mission", args[1]
+            ));
+            case DATABASE_ERROR -> plugin.message(sender, "force-mission-database-error", Map.of(
+                    "mission", args[1]
+            ));
+        }
     }
 
     private void handleReroll(CommandSender sender, String[] args) {
@@ -177,6 +216,7 @@ public final class MDVQuestCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage(ColorUtil.color("&e/mdvquest crear &7- crea una misión"));
         sender.sendMessage(ColorUtil.color("&e/mdvquest reload"));
         sender.sendMessage(ColorUtil.color("&e/mdvquest status"));
+        sender.sendMessage(ColorUtil.color("&e/mdvquest force <id-de-mision>"));
         sender.sendMessage(ColorUtil.color("&e/mdvquest reroll <rotacion|all> confirmar"));
         sender.sendMessage(ColorUtil.color("&e/mdvquest event <jugador> <evento> [cantidad]"));
         sender.sendMessage(ColorUtil.color("&e/mdvquest profexp <jugador> <profesion> <cantidad>"));
@@ -191,8 +231,11 @@ public final class MDVQuestCommand implements CommandExecutor, TabCompleter {
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (!sender.hasPermission("mdvquest.admin")) return Collections.emptyList();
-        if (args.length == 1) return filter(List.of("admin", "crear", "reload", "status", "reroll", "rotate", "event", "profexp", "report"), args[0]);
+        if (args.length == 1) return filter(List.of("admin", "crear", "reload", "status", "force", "reroll", "rotate", "event", "profexp", "report"), args[0]);
         if (args.length == 2 && args[0].equalsIgnoreCase("admin")) return filter(List.of("crear"), args[1]);
+        if (args.length == 2 && (args[0].equalsIgnoreCase("force") || args[0].equalsIgnoreCase("forzar"))) {
+            return filter(plugin.getRegistry().missions().stream().map(mission -> mission.id()).toList(), args[1]);
+        }
         if (args.length == 2 && (args[0].equalsIgnoreCase("event") || args[0].equalsIgnoreCase("profexp") || args[0].equalsIgnoreCase("report"))) {
             return filter(Bukkit.getOnlinePlayers().stream().map(Player::getName).toList(), args[1]);
         }

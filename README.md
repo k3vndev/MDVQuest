@@ -1,8 +1,12 @@
-# MDVQuest 1.2.0
+# MDVQuest 1.2.1
 
 MDVQuest crea misiones individuales con rotaciones globales: durante cada ciclo todos los jugadores reciben las mismas misiones, pero el progreso y la reclamación pertenecen a cada jugador.
 
-## Novedades de 1.2.0
+## Novedades de 1.2.1
+
+- `/mdvquest force <id>` añade una misión concreta al ciclo actual sin borrar progreso.
+- Las misiones VIP bloqueadas se completan sin mostrar un aviso engañoso de reclamación.
+- El icono de reclamación pendiente usa panel verde claro.
 
 - Cantidad variable de misiones por rotación: cada pool usa `min-missions` y `max-missions`.
 - Tres selecciones globales y estables por ciclo:
@@ -37,7 +41,7 @@ MDVQuest crea misiones individuales con rotaciones globales: durante cada ciclo 
 
 - El jugador no acepta misiones manualmente.
 - Toda acción válida progresa automáticamente las misiones activas compatibles.
-- Al completar una misión, su icono cambia a lana verde.
+- Al completar una misión, su icono cambia a un panel verde claro.
 - Al pulsarla, MDVQuest verifica el espacio y entrega la recompensa.
 - Si la misión expira antes de reclamar, la recompensa se pierde.
 - Al reclamar, queda marcada con tinte gris hasta el final del ciclo.
@@ -137,13 +141,13 @@ Requiere Java 21. El proyecto usa `paper-api:1.21.6-R0.1-SNAPSHOT` como dependen
 
 ```bash
 mvn -B -U clean package
-bash scripts/verify-bytecode.sh target/MDVQuest-1.2.0.jar
+bash scripts/verify-bytecode.sh target/MDVQuest-1.2.1.jar
 ```
 
 El resultado queda en:
 
 ```text
-target/MDVQuest-1.2.0.jar
+target/MDVQuest-1.2.1.jar
 ```
 
 GitHub Actions ejecuta ambos pasos y publica el JAR como artefacto. Consulta `BUILD-GITHUB.md` y prueba primero en staging con `TEST-CHECKLIST.md`.

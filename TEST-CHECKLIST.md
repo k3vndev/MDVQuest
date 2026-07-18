@@ -1,12 +1,12 @@
-# Checklist de staging — MDVQuest 1.2.0
+# Checklist de staging — MDVQuest 1.2.1
 
 Prueba esta versión en una copia de Purpur 1.21.6 antes de producción.
 
 ## Arranque y migración
 
 - [ ] El servidor inicia sin `NoSuchMethodError`.
-- [ ] `/mdvquest status` muestra versión 1.2.0.
-- [ ] Las misiones y el progreso existentes de 1.0.3 permanecen.
+- [ ] `/mdvquest status` muestra versión 1.2.1.
+- [ ] Las misiones y el progreso existentes de 1.2.0 permanecen.
 - [ ] `/mdvquest` abre el menú público.
 - [ ] `/mdvquest admin` exige `mdvquest.admin`.
 
@@ -23,7 +23,16 @@ Prueba esta versión en una copia de Purpur 1.21.6 antes de producción.
 - [ ] `mdvquest.access.vip1` permite reclamar VIP1.
 - [ ] `mdvquest.access.vip2` permite reclamar VIP2 y, con herencia activada, también VIP1.
 - [ ] Perder el permiso antes de reclamar vuelve a bloquear la recompensa; recuperarlo la habilita mientras la misión no expire.
+- [ ] Completar una misión VIP sin permiso no muestra el mensaje final de reclamación ni reproduce el sonido de confirmación.
 - [ ] El editor guarda correctamente `access-pool: normal|vip1|vip2`.
+
+## Forzar misión concreta
+
+- [ ] `/mdvquest force <id>` añade la misión a su ciclo actual sin borrar otras instancias ni progreso.
+- [ ] Una definición deshabilitada puede forzarse para pruebas si su rotación está habilitada.
+- [ ] Forzar una misión ya activa responde correctamente y no crea duplicados.
+- [ ] El autocompletado muestra IDs cargados.
+- [ ] Un usuario sin `mdvquest.admin.force` no puede ejecutar el comando.
 
 ## Reroll
 
@@ -41,6 +50,7 @@ Prueba esta versión en una copia de Purpur 1.21.6 antes de producción.
 - [ ] El lore muestra descripción, objetivos, recompensas y expiración.
 - [ ] Las herramientas no muestran daño, atributos o tooltip vanilla innecesario.
 - [ ] La cabeza de volver del catálogo ejecuta el comando configurado y la del detalle regresa a la página exacta anterior.
+- [ ] Una misión terminada pendiente de reclamar usa panel verde claro, no lana.
 - [ ] El detalle muestra hasta 7 objetivos en los slots 10 al 16.
 - [ ] Las recompensas físicas y de EXP se ven correctamente y con nombres visibles, no IDs internos.
 - [ ] La paginación de recompensas aparece solo con más de 5 entradas.

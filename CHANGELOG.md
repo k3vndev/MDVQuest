@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.2.1
+
+- Las misiones VIP completadas sin permiso de reclamación ya no muestran el mensaje final que invita a cobrar ni reproducen el sonido de confirmación.
+- Añadido `/mdvquest force <id-de-mision>` (`/mdvquest forzar`) para insertar una misión concreta en el ciclo global actual sin reroll, sin eliminar otras misiones y sin borrar progreso.
+- El comando `force` admite también definiciones deshabilitadas para facilitar pruebas; la rotación de la misión debe existir y estar habilitada.
+- Añadido permiso `mdvquest.admin.force` y autocompletado de IDs de misión.
+- El estado completado pendiente de reclamar usa por defecto `LIME_STAINED_GLASS_PANE` en lugar de lana verde.
+- No hay cambios de esquema en SQLite ni migraciones destructivas.
+
 ## 1.2.0
 
 - Cantidad variable por rotación y pool mediante `min-missions` / `max-missions`.

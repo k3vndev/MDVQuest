@@ -182,6 +182,19 @@ public final class MDVQuestPlugin extends JavaPlugin {
         }
     }
 
+    public RotationService.ForceResult forceMission(String missionId) {
+        try {
+            RotationService.ForceResult result = rotationService.forceMission(missionId, System.currentTimeMillis());
+            if (result.status() == RotationService.ForceStatus.ADDED) {
+                progressService.rebuildIndex();
+            }
+            return result;
+        } catch (SQLException ex) {
+            getLogger().severe("No se pudo forzar la mision: " + ex.getMessage());
+            return new RotationService.ForceResult(RotationService.ForceStatus.DATABASE_ERROR, null);
+        }
+    }
+
     public int forceRotateAll() {
         int rotated = 0;
         progressService.flushAll();

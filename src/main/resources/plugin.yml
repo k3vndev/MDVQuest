@@ -1,5 +1,5 @@
 name: MDVQuest
-version: 1.2.0
+version: 1.2.1
 main: com.mdvcraft.mdvquest.MDVQuestPlugin
 api-version: '1.21'
 author: MDVCRAFT
@@ -27,8 +27,12 @@ permissions:
     default: op
     children:
       mdvquest.admin.reroll: true
+      mdvquest.admin.force: true
   mdvquest.admin.reroll:
     description: Permite regenerar una o todas las rotaciones globales.
+    default: op
+  mdvquest.admin.force:
+    description: Permite añadir una misión concreta a su rotación global actual sin borrar progreso.
     default: op
   mdvquest.access.vip1:
     description: Permite reclamar recompensas de instancias VIP1.

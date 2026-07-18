@@ -275,7 +275,7 @@ public final class QuestMenuManager implements Listener {
         ItemStack item;
         if (claimed) item = new ItemStack(material("menus.main.mission-state.claimed-material", Material.GRAY_DYE));
         else if (locked) item = new ItemStack(access.lockedMaterial(instance.accessTier()));
-        else if (complete) item = new ItemStack(material("menus.main.mission-state.completed-material", Material.LIME_WOOL));
+        else if (complete) item = new ItemStack(material("menus.main.mission-state.completed-material", Material.LIME_STAINED_GLASS_PANE));
         else {
             item = instance.definition().iconItem();
             if (item == null) {

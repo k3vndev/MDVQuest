@@ -133,7 +133,7 @@ public final class ProgressService {
             } else {
                 sendProgressActionbar(player, ref.objective(), after);
             }
-            if (missionCompleted) {
+            if (missionCompleted && plugin.getAccessService().hasAccess(player, ref.instance().accessTier())) {
                 plugin.message(player, "mission-completed", Map.of("mission", ref.instance().definition().name()));
                 plugin.getSocialHook().sound(player, "confirm");
             }

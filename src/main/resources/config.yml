@@ -1,5 +1,5 @@
 # ==========================================================
-# MDVQuest 1.2.0 - Misiones individuales globales + editor visual
+# MDVQuest 1.2.1 - Misiones individuales globales + editor visual
 # Los dias son dias REALES, no dias de Minecraft.
 # ==========================================================
 
@@ -158,7 +158,7 @@ menus:
         - "&7Regresa al menú de /social."
 
     mission-state:
-      completed-material: LIME_WOOL
+      completed-material: LIME_STAINED_GLASS_PANE
       claimed-material: GRAY_DYE
 
     # Textos del lore de cada misión en el catálogo principal.
@@ -337,3 +337,9 @@ messages:
   reroll-all-warning: "&cEsto regenerará TODAS las rotaciones y borrará todo su progreso/recompensas pendientes. Confirma con: &f%command%"
   reroll-success: "&aReroll completado para la rotación: &f%rotation%"
   reroll-all-success: "&aReroll completado para &f%count% &arotaciones."
+  force-mission-success: "&aMisión forzada: &f%mission% &7(%rotation%). &aExpira en &f%remaining%&a."
+  force-mission-already-active: "&eLa misión &f%mission% &eya está activa en la rotación &f%rotation%&e."
+  force-mission-not-found: "&cNo existe una misión cargada con el ID &f%mission%&c."
+  force-mission-rotation-missing: "&cLa misión &f%mission% &cusa una rotación inexistente."
+  force-mission-rotation-disabled: "&cLa rotación de &f%mission% &cestá deshabilitada en config.yml."
+  force-mission-database-error: "&cNo se pudo guardar la misión forzada. Revisa la consola y SQLite."
