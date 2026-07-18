@@ -25,12 +25,25 @@ jobs:
       - name: Compilar con Maven y Paper oficial
         run: mvn -B -U clean package
 
+      - name: Detectar JAR generado
+        shell: bash
+        run: |
+          JAR_PATH=$(find target -maxdepth 1 -type f -name 'MDVQuest-*.jar' ! -name '*sources*' | sort | head -n 1)
+          if [ -z "$JAR_PATH" ]; then
+            echo "No se encontró el JAR compilado en target/."
+            exit 1
+          fi
+          ARTIFACT_NAME=$(basename "$JAR_PATH" .jar)
+          echo "JAR_PATH=$JAR_PATH" >> "$GITHUB_ENV"
+          echo "ARTIFACT_NAME=$ARTIFACT_NAME" >> "$GITHUB_ENV"
+          echo "JAR detectado: $JAR_PATH"
+
       - name: Verificar firmas Bukkit/Paper
-        run: bash scripts/verify-bytecode.sh target/MDVQuest-1.2.1.jar
+        run: bash scripts/verify-bytecode.sh "${{ env.JAR_PATH }}"
 
       - name: Publicar JAR
         uses: actions/upload-artifact@v4
         with:
-          name: MDVQuest-1.2.1
-          path: target/MDVQuest-1.2.1.jar
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ${{ env.JAR_PATH }}
           if-no-files-found: error
