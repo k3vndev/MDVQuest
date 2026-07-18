@@ -24,6 +24,7 @@ import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryView;
@@ -57,7 +58,8 @@ public final class QuestEditorManager implements Listener {
     private static final int[] DEPOSIT_SLOTS = {
             9,10,11,12,13,14,15,16,17,
             18,19,20,21,22,23,24,25,26,
-            27,28,29,30,31,32,33,34,35
+            27,28,29,30,31,32,33,34,35,
+            36,37,38,39,40,41,42,43,44
     };
 
     private final MDVQuestPlugin plugin;
@@ -75,6 +77,7 @@ public final class QuestEditorManager implements Listener {
     private final NamespacedKey groupKey;
     private final NamespacedKey typeKey;
     private final NamespacedKey missionKey;
+    private final NamespacedKey virtualRewardKey;
 
     public QuestEditorManager(MDVQuestPlugin plugin, ChatPromptManager prompts, QuestYamlService yamlService,
                               RewardService rewardService, MMOItemsHook mmoItems, MythicItemsHook mythicItems) {
@@ -90,6 +93,7 @@ public final class QuestEditorManager implements Listener {
         this.groupKey = new NamespacedKey(plugin, "editor_group");
         this.typeKey = new NamespacedKey(plugin, "editor_type");
         this.missionKey = new NamespacedKey(plugin, "editor_mission");
+        this.virtualRewardKey = new NamespacedKey(plugin, "virtual_reward_item");
     }
 
     public void openDurationPicker(Player player) {
@@ -284,26 +288,45 @@ public final class QuestEditorManager implements Listener {
         QuestDraft draft = drafts.get(player.getUniqueId());
         if (draft == null) { openDurationPicker(player); return; }
         Inventory inventory = plugin.getSocialHook().createInventory(null, "&8Recompensas de objetos", 54, true);
+        inventory.setItem(4, item(Material.CHEST, "&eEditor de recompensas", List.of(
+                "&7Los objetos de la cuadrícula representan",
+                "&7la recompensa final de la misión.",
+                "",
+                "&7Puedes moverlos, cambiar cantidades,",
+                "&7quitarlos o añadir otros desde tu inventario.",
+                "&7Shift + click derecho elimina un objeto.",
+                "&7Los objetos usados como plantilla se devuelven."),
+                "NONE", -1, 1, null, null, null));
+
         List<ItemStack> current = rewardService.previewItems(draft.rewards());
-        for (int i = 0; i < Math.min(9, current.size()); i++) {
-            ItemStack preview = ItemUtil.hideNativeTooltip(current.get(i));
-            ItemMeta meta = preview.getItemMeta();
-            if (meta != null) {
-                List<String> lore = meta.hasLore() && meta.getLore() != null ? new ArrayList<>(meta.getLore()) : new ArrayList<>();
-                lore.add("");
-                lore.add("&8Recompensa actual (solo vista)");
-                meta.setLore(ColorUtil.color(lore));
-                preview.setItemMeta(meta);
-            }
-            inventory.setItem(i, preview);
+        int count = Math.min(DEPOSIT_SLOTS.length, current.size());
+        for (int i = 0; i < count; i++) {
+            inventory.setItem(DEPOSIT_SLOTS[i], markVirtualReward(current.get(i)));
         }
-        for (int slot : DEPOSIT_SLOTS) inventory.setItem(slot, null);
-        inventory.setItem(45, backHead("REWARD_CANCEL", "&eCancelar", List.of("&7Devuelve los objetos colocados.")));
-        inventory.setItem(46, item(Material.LAVA_BUCKET, "&cEliminar recompensas actuales", List.of("&7No afecta experiencia ni comandos."), "REWARD_CLEAR", -1, 1, null, null, null));
-        inventory.setItem(48, item(Material.BARRIER, "&cCancelar", List.of(), "REWARD_CANCEL", -1, 1, null, null, null));
-        inventory.setItem(49, item(Material.EMERALD_BLOCK, "&aAceptar", List.of("&7Añade lo colocado a las recompensas actuales.", "&7Identifica MMOItems, Mythic/Crucible", "&7y objetos vanilla automáticamente."), "REWARD_ACCEPT", -1, 1, null, null, null));
-        inventory.setItem(50, item(Material.REDSTONE_BLOCK, "&cResetear colocados", List.of("&7Devuelve y limpia solo la zona de depósito."), "REWARD_RESET", -1, 1, null, null, null));
-        inventory.setItem(53, item(Material.BARRIER, "&cCerrar", List.of(), "REWARD_CANCEL", -1, 1, null, null, null));
+        if (current.size() > DEPOSIT_SLOTS.length) {
+            player.sendMessage(plugin.prefix() + "§cLa recompensa tiene más de " + DEPOSIT_SLOTS.length
+                    + " stacks y no puede editarse completa desde esta pantalla.");
+        }
+
+        inventory.setItem(45, backHead("REWARD_CANCEL", "&eCancelar", List.of("&7Descarta los cambios y devuelve tus plantillas.")));
+        inventory.setItem(46, item(Material.LAVA_BUCKET, "&cEliminar todas las recompensas",
+                List.of("&7Elimina solamente las recompensas de objetos.", "&7No afecta experiencia ni comandos."),
+                "REWARD_CLEAR", -1, 1, null, null, null));
+        inventory.setItem(48, item(Material.BARRIER, "&cCancelar", List.of("&7No guarda los cambios."),
+                "REWARD_CANCEL", -1, 1, null, null, null));
+        inventory.setItem(49, item(Material.EMERALD_BLOCK, "&aGuardar recompensas", List.of(
+                "&7Reemplaza las recompensas de objetos",
+                "&7por el contenido actual de la cuadrícula.",
+                "",
+                "&7Identifica automáticamente objetos vanilla,",
+                "&7MMOItems y MythicMobs/Crucible."),
+                "REWARD_ACCEPT", -1, 1, null, null, null));
+        inventory.setItem(50, item(Material.REDSTONE_BLOCK, "&cRestablecer cambios", List.of(
+                "&7Recupera las recompensas guardadas",
+                "&7antes de abrir este editor."),
+                "REWARD_RESET", -1, 1, null, null, null));
+        inventory.setItem(53, item(Material.BARRIER, "&cCerrar", List.of("&7No guarda los cambios."),
+                "REWARD_CANCEL", -1, 1, null, null, null));
         open(player, inventory, MenuType.REWARD_ITEMS, 1, null, null);
     }
 
@@ -415,6 +438,20 @@ public final class QuestEditorManager implements Listener {
             event.setCancelled(true);
             return;
         }
+        if (raw < session.inventory().getSize() && isDepositSlot(raw)
+                && event.isShiftClick() && event.isRightClick()) {
+            event.setCancelled(true);
+            ItemStack removed = event.getCurrentItem();
+            if (removed == null || removed.getType().isAir()) return;
+            session.inventory().setItem(raw, null);
+            if (!isVirtualReward(removed)) {
+                Map<Integer, ItemStack> leftovers = player.getInventory().addItem(removed);
+                for (ItemStack leftover : leftovers.values()) {
+                    player.getWorld().dropItemNaturally(player.getLocation(), leftover);
+                }
+            }
+            return;
+        }
         boolean unsafeMove = event.isShiftClick()
                 || event.getClick().isKeyboardClick()
                 || event.getClick().isCreativeAction()
@@ -423,8 +460,13 @@ public final class QuestEditorManager implements Listener {
             event.setCancelled(true);
             return;
         }
-        if (raw >= session.inventory().getSize()) return;
-        if (isDepositSlot(raw)) return; // Permite colocar y retirar manualmente.
+        if (raw >= session.inventory().getSize()) {
+            if (isVirtualReward(event.getCursor()) || isVirtualReward(event.getCurrentItem())) {
+                event.setCancelled(true);
+            }
+            return;
+        }
+        if (isDepositSlot(raw)) return; // Permite colocar, retirar, mover y cambiar cantidades manualmente.
         event.setCancelled(true);
         ItemStack clicked = event.getCurrentItem();
         if (clicked == null || !clicked.hasItemMeta()) return;
@@ -432,9 +474,22 @@ public final class QuestEditorManager implements Listener {
         if (action == null) return;
         switch (action) {
             case "REWARD_ACCEPT" -> acceptRewardItems(player, session.inventory());
-            case "REWARD_CANCEL" -> { returnDeposits(player, session.inventory()); openEditor(player); }
-            case "REWARD_RESET" -> { returnDeposits(player, session.inventory()); openRewardItems(player); }
-            case "REWARD_CLEAR" -> { clearItemRewards(player); returnDeposits(player, session.inventory()); openRewardItems(player); }
+            case "REWARD_CANCEL" -> {
+                returnTemplateDeposits(player, session.inventory());
+                cleanupVirtualRewards(player);
+                openEditor(player);
+            }
+            case "REWARD_RESET" -> {
+                returnTemplateDeposits(player, session.inventory());
+                cleanupVirtualRewards(player);
+                openRewardItems(player);
+            }
+            case "REWARD_CLEAR" -> {
+                clearItemRewards(player);
+                returnTemplateDeposits(player, session.inventory());
+                cleanupVirtualRewards(player);
+                openRewardItems(player);
+            }
         }
     }
 
@@ -445,8 +500,11 @@ public final class QuestEditorManager implements Listener {
         EditorSession session = sessions.get(player.getUniqueId());
         if (session == null || !event.getView().getTopInventory().equals(session.inventory())) return;
         if (session.type() == MenuType.REWARD_ITEMS) {
-            boolean invalidTop = event.getRawSlots().stream().anyMatch(slot -> slot < session.inventory().getSize() && !isDepositSlot(slot));
-            if (invalidTop) event.setCancelled(true);
+            boolean invalidTop = event.getRawSlots().stream()
+                    .anyMatch(slot -> slot < session.inventory().getSize() && !isDepositSlot(slot));
+            boolean virtualIntoPlayerInventory = isVirtualReward(event.getOldCursor())
+                    && event.getRawSlots().stream().anyMatch(slot -> slot >= session.inventory().getSize());
+            if (invalidTop || virtualIntoPlayerInventory) event.setCancelled(true);
             return;
         }
         if (event.getRawSlots().stream().anyMatch(slot -> slot < session.inventory().getSize())) event.setCancelled(true);
@@ -459,13 +517,24 @@ public final class QuestEditorManager implements Listener {
         EditorSession session = sessions.get(player.getUniqueId());
         if (session == null || !event.getInventory().equals(session.inventory())) return;
         sessions.remove(player.getUniqueId());
-        if (session.type() == MenuType.REWARD_ITEMS) returnDeposits(player, session.inventory());
+        if (session.type() == MenuType.REWARD_ITEMS) {
+            returnTemplateDeposits(player, session.inventory());
+            cleanupVirtualRewards(player);
+        }
+    }
+
+    @EventHandler
+    public void onJoin(PlayerJoinEvent event) {
+        cleanupVirtualRewards(event.getPlayer());
     }
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         EditorSession session = sessions.remove(event.getPlayer().getUniqueId());
-        if (session != null && session.type() == MenuType.REWARD_ITEMS) returnDeposits(event.getPlayer(), session.inventory());
+        if (session != null && session.type() == MenuType.REWARD_ITEMS) {
+            returnTemplateDeposits(event.getPlayer(), session.inventory());
+            cleanupVirtualRewards(event.getPlayer());
+        }
         drafts.remove(event.getPlayer().getUniqueId());
     }
 
@@ -714,40 +783,65 @@ public final class QuestEditorManager implements Listener {
     }
 
     private void acceptRewardItems(Player player, Inventory inventory) {
-        List<ItemStack> deposited = depositedItems(inventory);
-        if (deposited.isEmpty()) {
-            player.sendMessage(plugin.prefix() + "§eNo colocaste objetos nuevos; se conservan los actuales.");
-            openEditor(player);
-            return;
-        }
-
+        List<ItemStack> configuredItems = depositedItems(inventory);
         QuestDraft draft = draft(player);
         RewardDefinition old = draft.rewards();
-        List<RewardDefinition.VanillaItemReward> vanilla = new ArrayList<>(old.vanillaItems());
-        List<RewardDefinition.MmoItemReward> mmo = new ArrayList<>(old.mmoItems());
-        List<RewardDefinition.MythicItemReward> mythic = new ArrayList<>(old.mythicItems());
-        List<RewardDefinition.ExactItemReward> exact = new ArrayList<>(old.exactItems());
 
-        for (ItemStack stack : deposited) {
+        Map<String, Integer> vanillaAmounts = new LinkedHashMap<>();
+        Map<String, Integer> mmoAmounts = new LinkedHashMap<>();
+        Map<String, Integer> mythicAmounts = new LinkedHashMap<>();
+        List<RewardDefinition.ExactItemReward> exact = new ArrayList<>();
+
+        for (ItemStack stack : configuredItems) {
             Optional<MMOItemsHook.Identity> mmoIdentity = mmoItems.identify(stack);
             if (mmoIdentity.isPresent()) {
                 MMOItemsHook.Identity identity = mmoIdentity.get();
-                mmo.add(new RewardDefinition.MmoItemReward(identity.type(), identity.id(), stack.getAmount()));
+                String key = identity.type() + "\u0000" + identity.id();
+                mmoAmounts.merge(key, stack.getAmount(), Integer::sum);
                 continue;
             }
             Optional<String> mythicIdentity = mythicItems.identify(stack);
             if (mythicIdentity.isPresent()) {
-                mythic.add(new RewardDefinition.MythicItemReward(mythicIdentity.get(), stack.getAmount()));
+                mythicAmounts.merge(mythicIdentity.get(), stack.getAmount(), Integer::sum);
                 continue;
             }
-            if (!stack.hasItemMeta()) vanilla.add(new RewardDefinition.VanillaItemReward(stack.getType().name(), stack.getAmount()));
-            else exact.add(new RewardDefinition.ExactItemReward(stack, stack.getAmount()));
+            if (!stack.hasItemMeta()) {
+                vanillaAmounts.merge(stack.getType().name(), stack.getAmount(), Integer::sum);
+                continue;
+            }
+            mergeExactReward(exact, stack);
         }
 
+        List<RewardDefinition.VanillaItemReward> vanilla = new ArrayList<>();
+        vanillaAmounts.forEach((material, amount) ->
+                vanilla.add(new RewardDefinition.VanillaItemReward(material, amount)));
+
+        List<RewardDefinition.MmoItemReward> mmo = new ArrayList<>();
+        mmoAmounts.forEach((key, amount) -> {
+            int separator = key.indexOf('\u0000');
+            mmo.add(new RewardDefinition.MmoItemReward(key.substring(0, separator), key.substring(separator + 1), amount));
+        });
+
+        List<RewardDefinition.MythicItemReward> mythic = new ArrayList<>();
+        mythicAmounts.forEach((id, amount) ->
+                mythic.add(new RewardDefinition.MythicItemReward(id, amount)));
+
         draft.setRewards(new RewardDefinition(old.displayLore(), old.commands(), vanilla, mmo, mythic, exact, old.experience()));
-        returnDeposits(player, inventory);
-        player.sendMessage(plugin.prefix() + "§aRecompensas de objetos actualizadas.");
+        returnTemplateDeposits(player, inventory);
+        cleanupVirtualRewards(player);
+        player.sendMessage(plugin.prefix() + "§aRecompensas de objetos reemplazadas correctamente.");
         openEditor(player);
+    }
+
+    private void mergeExactReward(List<RewardDefinition.ExactItemReward> exact, ItemStack stack) {
+        ItemStack clean = stripVirtualReward(stack);
+        for (int i = 0; i < exact.size(); i++) {
+            RewardDefinition.ExactItemReward existing = exact.get(i);
+            if (!existing.item().isSimilar(clean)) continue;
+            exact.set(i, new RewardDefinition.ExactItemReward(existing.item(), existing.amount() + clean.getAmount()));
+            return;
+        }
+        exact.add(new RewardDefinition.ExactItemReward(clean, clean.getAmount()));
     }
 
     private void clearItemRewards(Player player) {
@@ -756,12 +850,13 @@ public final class QuestEditorManager implements Listener {
         draft.setRewards(new RewardDefinition(old.displayLore(), old.commands(), null, null, null, null, old.experience()));
     }
 
-    private void returnDeposits(Player player, Inventory inventory) {
+    private void returnTemplateDeposits(Player player, Inventory inventory) {
         if (inventory == null) return;
         for (int slot : DEPOSIT_SLOTS) {
             ItemStack item = inventory.getItem(slot);
             if (item == null || item.getType().isAir()) continue;
             inventory.setItem(slot, null);
+            if (isVirtualReward(item)) continue;
             Map<Integer, ItemStack> leftovers = player.getInventory().addItem(item);
             for (ItemStack leftover : leftovers.values()) player.getWorld().dropItemNaturally(player.getLocation(), leftover);
         }
@@ -771,9 +866,53 @@ public final class QuestEditorManager implements Listener {
         List<ItemStack> result = new ArrayList<>();
         for (int slot : DEPOSIT_SLOTS) {
             ItemStack item = inventory.getItem(slot);
-            if (item != null && !item.getType().isAir()) result.add(item.clone());
+            if (item != null && !item.getType().isAir()) result.add(stripVirtualReward(item));
         }
         return result;
+    }
+
+    private ItemStack markVirtualReward(ItemStack source) {
+        ItemStack item = source == null ? new ItemStack(Material.AIR) : source.clone();
+        if (item.getType().isAir()) return item;
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.getPersistentDataContainer().set(virtualRewardKey, PersistentDataType.BYTE, (byte) 1);
+            item.setItemMeta(meta);
+        }
+        return item;
+    }
+
+    private boolean isVirtualReward(ItemStack item) {
+        if (item == null || item.getType().isAir() || !item.hasItemMeta()) return false;
+        Byte value = item.getItemMeta().getPersistentDataContainer().get(virtualRewardKey, PersistentDataType.BYTE);
+        return value != null && value == (byte) 1;
+    }
+
+    private ItemStack stripVirtualReward(ItemStack source) {
+        ItemStack item = source.clone();
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.getPersistentDataContainer().remove(virtualRewardKey);
+            item.setItemMeta(meta);
+        }
+        return item;
+    }
+
+    private void clearVirtualRewardCursor(Player player) {
+        ItemStack cursor = player.getItemOnCursor();
+        if (isVirtualReward(cursor)) player.setItemOnCursor(null);
+    }
+
+    private void cleanupVirtualRewards(Player player) {
+        clearVirtualRewardCursor(player);
+        ItemStack[] contents = player.getInventory().getContents();
+        boolean changed = false;
+        for (int i = 0; i < contents.length; i++) {
+            if (!isVirtualReward(contents[i])) continue;
+            contents[i] = null;
+            changed = true;
+        }
+        if (changed) player.getInventory().setContents(contents);
     }
 
     private boolean isDepositSlot(int slot) {

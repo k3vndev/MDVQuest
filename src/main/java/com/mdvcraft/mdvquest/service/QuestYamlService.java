@@ -39,22 +39,13 @@ public final class QuestYamlService {
         File target = new File(folder, sanitizeFile(draft.targetFile()));
 
         try {
-            File original = draft.editingExisting() && draft.originalFile() != null
-                    ? new File(folder, sanitizeFile(draft.originalFile())) : null;
-            boolean sameFile = original != null && original.getCanonicalFile().equals(target.getCanonicalFile());
-
-            if (sameFile) {
-                YamlConfiguration yaml = YamlConfiguration.loadConfiguration(target);
-                if (!draft.originalId().equals(draft.id())) yaml.set("missions." + draft.originalId(), null);
-                writeMission(yaml, draft);
-                saveAtomic(yaml, target);
+            if (draft.editingExisting()) {
+                saveExistingMissionTransaction(folder, target, draft);
             } else {
-                // Primero se escribe el destino. Si luego falla la limpieza del archivo anterior,
-                // queda un duplicado reparable, pero nunca se pierde la misión original.
                 YamlConfiguration targetYaml = YamlConfiguration.loadConfiguration(target);
+                removeMissionByNormalizedId(targetYaml, draft.id());
                 writeMission(targetYaml, draft);
                 saveAtomic(targetYaml, target);
-                if (original != null && original.exists()) removeMissionAtomic(original, draft.originalId());
             }
 
             return new SaveResult(true, "Misión guardada en " + target.getName(), target.getName());
@@ -137,11 +128,96 @@ public final class QuestYamlService {
         if (!experience.isEmpty()) yaml.set(base + ".experience", experience);
     }
 
-    private void removeMissionAtomic(File file, String missionId) throws IOException {
-        if (file == null || missionId == null || !file.exists()) return;
-        YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
-        yaml.set("missions." + missionId, null);
-        saveAtomic(yaml, file);
+    private void saveExistingMissionTransaction(File folder, File target, QuestDraft draft) throws IOException {
+        Map<File, YamlConfiguration> changed = new LinkedHashMap<>();
+        File[] missionFiles = folder.listFiles((dir, name) -> name.toLowerCase(Locale.ROOT).endsWith(".yml"));
+        if (missionFiles != null) {
+            List<File> ordered = new ArrayList<>(List.of(missionFiles));
+            ordered.sort(Comparator.comparing(File::getName));
+            for (File file : ordered) {
+                YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
+                boolean removed = removeMissionByNormalizedId(yaml, draft.originalId());
+                if (!QuestRegistry.normalizeMission(draft.originalId()).equals(QuestRegistry.normalizeMission(draft.id()))) {
+                    removed |= removeMissionByNormalizedId(yaml, draft.id());
+                }
+                if (removed) changed.put(file.getCanonicalFile(), yaml);
+            }
+        }
+
+        File canonicalTarget = target.getCanonicalFile();
+        YamlConfiguration targetYaml = changed.get(canonicalTarget);
+        if (targetYaml == null) targetYaml = YamlConfiguration.loadConfiguration(canonicalTarget);
+        removeMissionByNormalizedId(targetYaml, draft.originalId());
+        removeMissionByNormalizedId(targetYaml, draft.id());
+        writeMission(targetYaml, draft);
+        changed.put(canonicalTarget, targetYaml);
+
+        // Guarda primero todos los orígenes y al final el destino. Si cualquier escritura falla,
+        // restaura todos los archivos. Esto también limpia duplicados históricos del mismo ID.
+        List<File> order = new ArrayList<>(changed.keySet());
+        order.sort((left, right) -> {
+            boolean leftTarget = left.equals(canonicalTarget);
+            boolean rightTarget = right.equals(canonicalTarget);
+            if (leftTarget == rightTarget) return left.getName().compareTo(right.getName());
+            return leftTarget ? 1 : -1;
+        });
+
+        Map<File, byte[]> backups = new LinkedHashMap<>();
+        for (File file : order) {
+            backups.put(file, Files.exists(file.toPath()) ? Files.readAllBytes(file.toPath()) : null);
+        }
+
+        try {
+            for (File file : order) saveAtomic(changed.get(file), file);
+        } catch (IOException failure) {
+            IOException rollbackFailure = null;
+            for (Map.Entry<File, byte[]> backup : backups.entrySet()) {
+                try {
+                    restoreFile(backup.getKey(), backup.getValue());
+                } catch (IOException ex) {
+                    if (rollbackFailure == null) rollbackFailure = ex;
+                    else rollbackFailure.addSuppressed(ex);
+                }
+            }
+            if (rollbackFailure != null) {
+                failure.addSuppressed(rollbackFailure);
+                plugin.getLogger().severe("También falló la restauración de YAML tras guardar "
+                        + draft.id() + ": " + rollbackFailure.getMessage());
+            }
+            throw failure;
+        }
+    }
+
+    private boolean removeMissionByNormalizedId(YamlConfiguration yaml, String missionId) {
+        if (yaml == null || missionId == null || missionId.isBlank()) return false;
+        var missions = yaml.getConfigurationSection("missions");
+        if (missions == null) return false;
+        String normalized = QuestRegistry.normalizeMission(missionId);
+        List<String> matches = missions.getKeys(false).stream()
+                .filter(raw -> QuestRegistry.normalizeMission(raw).equals(normalized))
+                .toList();
+        for (String raw : matches) yaml.set("missions." + raw, null);
+        return !matches.isEmpty();
+    }
+
+    private void restoreFile(File file, byte[] backup) throws IOException {
+        if (backup == null) {
+            Files.deleteIfExists(file.toPath());
+            return;
+        }
+        File parent = file.getParentFile();
+        if (parent != null && !parent.exists() && !parent.mkdirs()) {
+            throw new IOException("No se pudo restaurar la carpeta " + parent.getAbsolutePath());
+        }
+        File temp = new File(parent, file.getName() + ".rollback.tmp");
+        Files.write(temp.toPath(), backup);
+        try {
+            Files.move(temp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+        } catch (AtomicMoveNotSupportedException ignored) {
+            Files.move(temp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        } finally {
+            Files.deleteIfExists(temp.toPath());
+        }
     }
 
     private void saveAtomic(YamlConfiguration yaml, File target) throws IOException {

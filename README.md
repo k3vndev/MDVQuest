@@ -1,8 +1,13 @@
-# MDVQuest 1.2.2
+# MDVQuest 1.2.3
 
 MDVQuest crea misiones individuales con rotaciones globales: durante cada ciclo todos los jugadores reciben las mismas misiones, pero el progreso y la reclamación pertenecen a cada jugador.
 
-## Novedades de 1.2.2
+## Novedades de 1.2.3
+
+- Editor de recompensas físicas completamente editable: las recompensas actuales aparecen dentro de la cuadrícula y pueden moverse, cambiar de cantidad, eliminarse o reemplazarse.
+- Al guardar, la cuadrícula reemplaza el conjunto de recompensas de objetos; la EXP y los comandos se conservan.
+- Mover una misión entre archivos YAML elimina la copia original, incluso cuando el ID original usaba guiones bajos.
+- Al editar una misión, el guardado limpia duplicados históricos del mismo ID normalizado en otros YAML.
 
 - `/mdvquest force <id>` añade una misión concreta al ciclo actual sin borrar progreso.
 - Las misiones VIP bloqueadas se completan sin mostrar un aviso engañoso de reclamación.
@@ -141,13 +146,13 @@ Requiere Java 21. El proyecto usa `paper-api:1.21.6-R0.1-SNAPSHOT` como dependen
 
 ```bash
 mvn -B -U clean package
-bash scripts/verify-bytecode.sh target/MDVQuest-1.2.2.jar
+bash scripts/verify-bytecode.sh target/MDVQuest-1.2.3.jar
 ```
 
 El resultado queda en:
 
 ```text
-target/MDVQuest-1.2.2.jar
+target/MDVQuest-1.2.3.jar
 ```
 
 GitHub Actions ejecuta ambos pasos y publica el JAR como artefacto. Consulta `BUILD-GITHUB.md` y prueba primero en staging con `TEST-CHECKLIST.md`.

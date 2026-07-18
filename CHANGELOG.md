@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.2.3
+
+- Corregido el editor de recompensas físicas: las recompensas existentes ya no aparecen bloqueadas en el slot 0.
+- La cuadrícula editable usa los slots 9–44 y representa el resultado final de recompensas de objetos.
+- Se pueden mover objetos, modificar cantidades, añadir plantillas desde el inventario y eliminar entradas con Shift + clic derecho.
+- Guardar reemplaza las recompensas físicas actuales en lugar de añadir duplicados; experiencia y comandos permanecen intactos.
+- Los objetos usados como plantilla se devuelven al administrador y las vistas virtuales no pueden extraerse como ítems reales.
+- Corregido el movimiento entre archivos YAML cuando el ID original contenía guiones bajos u otra variante normalizada.
+- Guardar una misión existente elimina copias duplicadas del mismo ID normalizado en todos los YAML y usa restauración transaccional si alguna escritura falla.
+- Sin cambios en SQLite, rotaciones ni progreso de jugadores.
+
 ## 1.2.2
 
 - Las misiones VIP completadas sin permiso de reclamación ya no muestran el mensaje final que invita a cobrar ni reproducen el sonido de confirmación.

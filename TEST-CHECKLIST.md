@@ -1,11 +1,11 @@
-# Checklist de staging — MDVQuest 1.2.2
+# Checklist de staging — MDVQuest 1.2.3
 
 Prueba esta versión en una copia de Purpur 1.21.6 antes de producción.
 
 ## Arranque y migración
 
 - [ ] El servidor inicia sin `NoSuchMethodError`.
-- [ ] `/mdvquest status` muestra versión 1.2.2.
+- [ ] `/mdvquest status` muestra versión 1.2.3.
 - [ ] Las misiones y el progreso existentes de 1.2.0 permanecen.
 - [ ] `/mdvquest` abre el menú público.
 - [ ] `/mdvquest admin` exige `mdvquest.admin`.
@@ -113,3 +113,20 @@ Prueba esta versión en una copia de Purpur 1.21.6 antes de producción.
 - [ ] SQLite no genera errores `database is locked`.
 - [ ] El guardado periódico no produce picos perceptibles.
 - [ ] Una rotación expirada elimina su progreso y recompensas no reclamadas.
+
+## Editor de recompensas 1.2.3
+
+- [ ] Editar una misión con recompensas existentes: deben aparecer en los slots 9–44, no en el slot 0.
+- [ ] Mover recompensas entre slots y modificar cantidades con clics normales.
+- [ ] Añadir un objeto vanilla, MMOItem y Mythic/Crucible desde el inventario.
+- [ ] Eliminar una recompensa con Shift + clic derecho.
+- [ ] Guardar: la cuadrícula reemplaza las recompensas físicas anteriores sin duplicarlas.
+- [ ] Cancelar o cerrar: los objetos usados como plantilla vuelven al inventario y no se obtienen copias virtuales.
+- [ ] La EXP y los comandos configurados permanecen sin cambios.
+
+## Movimiento entre YAML 1.2.3
+
+- [ ] Mover una misión cuyo ID original contiene `_` a otro YAML.
+- [ ] Confirmar que desaparece del archivo anterior y aparece una sola vez en el nuevo.
+- [ ] Repetir con un ID que usa `-`.
+- [ ] Si existían copias históricas del mismo ID normalizado, guardar la misión debe dejar una sola copia.
