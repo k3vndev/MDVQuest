@@ -1,6 +1,11 @@
-# MDVQuest 1.2.4
+# MDVQuest 1.2.5
 
 MDVQuest crea misiones individuales con rotaciones globales: durante cada ciclo todos los jugadores reciben las mismas misiones, pero el progreso y la reclamación pertenecen a cada jugador.
+
+## Novedades de 1.2.5
+
+- `mdvquest.editor` abre el catálogo y editor visual sin entregar recarga, reroll, force ni reportes administrativos.
+- `mdvquest.admin` conserva la administración técnica completa y hereda el permiso de editor.
 
 ## Novedades de 1.2.4
 

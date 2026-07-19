@@ -44,30 +44,33 @@ public final class MDVQuestCommand implements CommandExecutor, TabCompleter {
         }
 
         String sub = args[0].toLowerCase(Locale.ROOT);
+        boolean editorCommand = sub.equals("admin") || sub.equals("gestionar")
+                || sub.equals("crear") || sub.equals("editor") || sub.equals("new");
+
+        if (editorCommand) {
+            if (!sender.hasPermission("mdvquest.editor") && !sender.hasPermission("mdvquest.admin")) {
+                sender.sendMessage(plugin.prefix() + ColorUtil.color("&cNo tienes permiso."));
+                return true;
+            }
+            if (!(sender instanceof Player player)) {
+                sender.sendMessage("El editor visual solo puede abrirse dentro del juego.");
+                return true;
+            }
+            if (sub.equals("crear") || sub.equals("editor") || sub.equals("new")
+                    || (args.length >= 2 && (args[1].equalsIgnoreCase("crear") || args[1].equalsIgnoreCase("new")))) {
+                plugin.getEditorManager().openDurationPicker(player);
+            } else {
+                plugin.getEditorManager().openAdminCatalog(player);
+            }
+            return true;
+        }
+
         if (!sender.hasPermission("mdvquest.admin")) {
             sender.sendMessage(plugin.prefix() + ColorUtil.color("&cNo tienes permiso."));
             return true;
         }
 
         switch (sub) {
-            case "admin", "gestionar" -> {
-                if (!(sender instanceof Player player)) {
-                    sender.sendMessage("El editor visual solo puede abrirse dentro del juego.");
-                    return true;
-                }
-                if (args.length >= 2 && (args[1].equalsIgnoreCase("crear") || args[1].equalsIgnoreCase("new"))) {
-                    plugin.getEditorManager().openDurationPicker(player);
-                } else {
-                    plugin.getEditorManager().openAdminCatalog(player);
-                }
-            }
-            case "crear", "editor", "new" -> {
-                if (!(sender instanceof Player player)) {
-                    sender.sendMessage("El editor visual solo puede abrirse dentro del juego.");
-                    return true;
-                }
-                plugin.getEditorManager().openDurationPicker(player);
-            }
             case "reload" -> {
                 plugin.reloadPlugin();
                 plugin.message(sender, "reload", Map.of());
@@ -230,9 +233,17 @@ public final class MDVQuestCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        if (!sender.hasPermission("mdvquest.admin")) return Collections.emptyList();
-        if (args.length == 1) return filter(List.of("admin", "crear", "reload", "status", "force", "reroll", "rotate", "event", "profexp", "report"), args[0]);
-        if (args.length == 2 && args[0].equalsIgnoreCase("admin")) return filter(List.of("crear"), args[1]);
+        boolean editor = sender.hasPermission("mdvquest.editor") || sender.hasPermission("mdvquest.admin");
+        boolean admin = sender.hasPermission("mdvquest.admin");
+        if (!editor && !admin) return Collections.emptyList();
+        if (args.length == 1) {
+            List<String> options = new ArrayList<>();
+            if (editor) options.addAll(List.of("admin", "crear"));
+            if (admin) options.addAll(List.of("reload", "status", "force", "reroll", "rotate", "event", "profexp", "report"));
+            return filter(options, args[0]);
+        }
+        if (args.length == 2 && args[0].equalsIgnoreCase("admin") && editor) return filter(List.of("crear"), args[1]);
+        if (!admin) return Collections.emptyList();
         if (args.length == 2 && (args[0].equalsIgnoreCase("force") || args[0].equalsIgnoreCase("forzar"))) {
             return filter(plugin.getRegistry().missions().stream().map(mission -> mission.id()).toList(), args[1]);
         }

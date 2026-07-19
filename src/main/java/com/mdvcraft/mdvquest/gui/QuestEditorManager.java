@@ -96,7 +96,15 @@ public final class QuestEditorManager implements Listener {
         this.virtualRewardKey = new NamespacedKey(plugin, "virtual_reward_item");
     }
 
+    private boolean hasEditorPermission(Player player) {
+        return player != null && (player.hasPermission("mdvquest.editor") || player.hasPermission("mdvquest.admin"));
+    }
+
     public void openDurationPicker(Player player) {
+        if (!hasEditorPermission(player)) {
+            plugin.message(player, "no-permission", Map.of());
+            return;
+        }
         Inventory inventory = plugin.getSocialHook().createInventory(null, "&8Crear misión: duración", 54, true);
         int[] slots = {10,11,12,13,14,15,16};
         for (int day = 1; day <= 7; day++) {
@@ -116,6 +124,10 @@ public final class QuestEditorManager implements Listener {
     }
 
     public void openEditor(Player player) {
+        if (!hasEditorPermission(player)) {
+            plugin.message(player, "no-permission", Map.of());
+            return;
+        }
         QuestDraft draft = drafts.get(player.getUniqueId());
         if (draft == null) {
             openDurationPicker(player);
@@ -191,6 +203,10 @@ public final class QuestEditorManager implements Listener {
     }
 
     public void openAdminCatalog(Player player) {
+        if (!hasEditorPermission(player)) {
+            plugin.message(player, "no-permission", Map.of());
+            return;
+        }
         openAdminCatalog(player, DurationGroup.ONE_DAY, 1);
     }
 
@@ -373,6 +389,12 @@ public final class QuestEditorManager implements Listener {
         if (!(clicker instanceof Player player)) return;
         EditorSession session = sessions.get(player.getUniqueId());
         if (session == null || !event.getView().getTopInventory().equals(session.inventory())) return;
+        if (!hasEditorPermission(player)) {
+            event.setCancelled(true);
+            player.closeInventory();
+            plugin.message(player, "no-permission", Map.of());
+            return;
+        }
 
         if (session.type() == MenuType.REWARD_ITEMS) {
             handleRewardInventoryClick(event, player, session);
@@ -573,6 +595,12 @@ public final class QuestEditorManager implements Listener {
         if (!(clicker instanceof Player player)) return;
         EditorSession session = sessions.get(player.getUniqueId());
         if (session == null || !event.getView().getTopInventory().equals(session.inventory())) return;
+        if (!hasEditorPermission(player)) {
+            event.setCancelled(true);
+            player.closeInventory();
+            plugin.message(player, "no-permission", Map.of());
+            return;
+        }
         if (session.type() == MenuType.REWARD_ITEMS) {
             boolean invalidTop = event.getRawSlots().stream()
                     .anyMatch(slot -> slot < session.inventory().getSize() && !isDepositSlot(slot));
