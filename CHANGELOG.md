@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.3.0
+
+- El menú público de `/mdvquest`, `/quest`, `/quests`, `/misiones` y MDVSocial pasa a ser una vista de solo consulta: muestra progreso, objetivos, recompensas y expiración, pero no abre detalles, no entrega objetos y no reclama premios.
+- Añadido un menú interactivo independiente que conserva el comportamiento completo anterior: detalles, entregas y reclamación.
+- Añadido `/mdvquest npc [jugador]` para abrir el menú interactivo completo; desde consola/Citizens requiere indicar el jugador.
+- Añadido el permiso `mdvquest.admin.open-interactive`, heredado por `mdvquest.admin`.
+- Las dos variantes del menú usan configuraciones separadas en `menus.viewer` y `menus.interactive`, incluyendo títulos, tamaño, relleno, slots, categorías, separadores, estados, lore, paginación y botón de regreso.
+- El detalle interactivo se personaliza en `menus.interactive.detail`.
+- El catálogo administrativo incorpora un filtro cíclico por archivo YAML en el slot 46. General/todos los YAML siempre es la primera opción; clic izquierdo avanza, clic derecho retrocede y Shift-click reinicia el filtro.
+- El filtro por YAML se combina con duración y página, y se conserva al visualizar, editar, cancelar o regresar.
+- Al guardar o mover una misión, el catálogo se abre filtrado por su YAML de destino.
+- Migración automática no destructiva: las antiguas secciones `menus.main`, `menus.detail`, `menus.page-buttons` y `menus.back-command` se copian a las nuevas variantes sin borrar personalizaciones.
+- El mensaje antiguo que invitaba a reclamar con `/misiones` se actualiza al encargado de misiones cuando todavía conserva el texto predeterminado anterior.
+- No hay cambios de esquema en SQLite ni migraciones de misiones o familias.
+
 ## 1.2.4
 
 - Corregida la cuadrícula del editor de recompensas: los slots 9–44 quedan realmente vacíos aunque MDVSocial rellene el inventario con paneles.

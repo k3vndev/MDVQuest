@@ -1,6 +1,14 @@
-# MDVQuest 1.2.5
+# MDVQuest 1.3.0
 
 MDVQuest crea misiones individuales con rotaciones globales: durante cada ciclo todos los jugadores reciben las mismas misiones, pero el progreso y la reclamación pertenecen a cada jugador.
+
+## Novedades de 1.3.0
+
+- `/mdvquest`, `/quest`, `/quests`, `/misiones` y el botón de MDVSocial abren un menú **VIEW_ONLY**: permite revisar progreso, objetivos, recompensas y expiración, pero no abre detalles, no entrega objetos y no reclama premios.
+- `/mdvquest npc [jugador]` abre el menú **INTERACTIVE** completo para el encargado de misiones o para pruebas administrativas.
+- Ambos menús tienen configuración visual separada bajo `menus.viewer` y `menus.interactive`.
+- El catálogo de `/mdvquest admin` puede filtrar misiones por archivo YAML; General/todos los YAML siempre aparece como primera opción.
+- Las configuraciones visuales antiguas se copian automáticamente a ambas variantes en la primera carga de 1.3.0.
 
 ## Novedades de 1.2.5
 
@@ -54,21 +62,22 @@ MDVQuest crea misiones individuales con rotaciones globales: durante cada ciclo 
 
 - El jugador no acepta misiones manualmente.
 - Toda acción válida progresa automáticamente las misiones activas compatibles.
-- Al completar una misión, su icono cambia a un panel verde claro.
-- Al pulsarla, MDVQuest verifica el espacio y entrega la recompensa.
+- `/quest` y MDVSocial permiten consultar el progreso desde cualquier lugar, sin acciones de entrega o reclamación.
+- El NPC abre el menú interactivo con `/mdvquest npc <jugador>`.
+- Al completar una misión, el visor indica que debe visitarse al encargado.
+- En el menú interactivo, MDVQuest verifica el espacio antes de entregar la recompensa.
 - Si la misión expira antes de reclamar, la recompensa se pierde.
 - Al reclamar, queda marcada con tinte gris hasta el final del ciclo.
 
 ## Menús
 
-El menú principal agrupa las misiones en:
+Las dos variantes principales agrupan las misiones en 1 día, 2–3 días, 4–6 días y 7 días.
 
-- 1 día.
-- 2 a 3 días.
-- 4 a 6 días.
-- 7 días.
+- `menus.viewer`: visor público de solo lectura.
+- `menus.interactive`: menú completo del NPC.
+- `menus.interactive.detail`: detalle, entregas y vista paginada de recompensas.
 
-Las flechas solo aparecen cuando la categoría o las recompensas necesitan otra página. La cabeza central inferior vuelve a `/social` desde el catálogo y a la página exacta anterior desde el detalle. Todos los slots, materiales, títulos, nombres, lore y paneles de estos dos menús se editan en `config.yml`. Los iconos ocultan atributos y tooltips vanilla innecesarios. MDVSocial continúa como `softdepend`: si está instalado, MDVQuest reutiliza sus inventarios, botones y sonidos; si no lo está, mantiene una GUI de respaldo.
+Cada variante permite configurar por separado título, tamaño, relleno, slots, categorías, separadores, estados, lore, paginación y botón de regreso. Las flechas solo aparecen cuando hacen falta. Los iconos ocultan atributos y tooltips vanilla innecesarios. MDVSocial continúa como `softdepend`: si está instalado, MDVQuest reutiliza sus inventarios, botones y sonidos; si no lo está, mantiene una GUI de respaldo.
 
 ## Nombres visibles de recompensas
 
@@ -95,11 +104,12 @@ No se arrojan recompensas por falta de espacio ni se marca la misión como recla
 
 ## Editor visual
 
-Permiso requerido: `mdvquest.admin`.
+Permiso requerido: `mdvquest.editor` o `mdvquest.admin`.
 
 - `/mdvquest crear`: comienza una misión nueva.
 - `/mdvquest admin`: abre el catálogo completo.
 - En el catálogo: clic izquierdo para visualizar; clic derecho para editar.
+- El botón del slot 46 filtra por YAML: izquierdo siguiente, derecho anterior y Shift-click General.
 - En el editor: el icono superior muestra cómo va quedando la misión.
 - El botón de objetivos abre el catálogo; `Shift + clic derecho` abre su administración.
 - En la administración de objetivos: clic izquierdo edita y clic derecho elimina.
@@ -138,7 +148,8 @@ El menú de recompensas devuelve al administrador todos los objetos depositados;
 
 ## Comandos
 
-- `/mdvquest`, `/misiones`, `/quests`, `/quest`: menú público.
+- `/mdvquest`, `/misiones`, `/quests`, `/quest`: visor público de solo consulta.
+- `/mdvquest npc [jugador]`: menú interactivo completo; desde consola/Citizens el jugador es obligatorio.
 - `/mdvquest crear`: editor de misión nueva.
 - `/mdvquest admin`: catálogo administrativo.
 - `/mdvquest reload`: recarga configuraciones y misiones.
@@ -154,13 +165,13 @@ Requiere Java 21. El proyecto usa `paper-api:1.21.6-R0.1-SNAPSHOT` como dependen
 
 ```bash
 mvn -B -U clean package
-bash scripts/verify-bytecode.sh target/MDVQuest-1.2.4.jar
+bash scripts/verify-bytecode.sh target/MDVQuest-1.3.0.jar
 ```
 
 El resultado queda en:
 
 ```text
-target/MDVQuest-1.2.4.jar
+target/MDVQuest-1.3.0.jar
 ```
 
 GitHub Actions ejecuta ambos pasos y publica el JAR como artefacto. Consulta `BUILD-GITHUB.md` y prueba primero en staging con `TEST-CHECKLIST.md`.
@@ -174,4 +185,5 @@ GitHub Actions ejecuta ambos pasos y publica el JAR como artefacto. Consulta `BU
 - SQLite añade automáticamente `access_pool`; las instancias antiguas se consideran normales.
 - Al primer arranque se generan los pools VIP que falten para el ciclo actual, sin reemplazar las misiones normales existentes.
 - El saneamiento opcional afecta únicamente a `missions/examples.yml`.
-- Revisa `menus.main` y `menus.detail` para personalizar completamente la distribución.
+- Revisa `menus.viewer`, `menus.interactive` y `menus.interactive.detail` para personalizar las dos variantes.
+- Las antiguas secciones `menus.main` y `menus.detail` se migran automáticamente sin borrar tu diseño.

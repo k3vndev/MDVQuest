@@ -26,6 +26,7 @@ import com.mdvcraft.mdvquest.util.ColorUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
@@ -63,6 +64,7 @@ public final class MDVQuestPlugin extends JavaPlugin {
     @Override
     public void onEnable() {
         saveDefaultConfig();
+        migrateLegacyMenuConfig();
         getConfig().options().copyDefaults(true);
         saveConfig();
         saveResourceIfMissing("families.yml");
@@ -151,6 +153,7 @@ public final class MDVQuestPlugin extends JavaPlugin {
     public void reloadPlugin() {
         progressService.flushAll();
         reloadConfig();
+        migrateLegacyMenuConfig();
         getConfig().options().copyDefaults(true);
         saveConfig();
         new ExampleRewardSanitizer(this).run();
@@ -238,6 +241,61 @@ public final class MDVQuestPlugin extends JavaPlugin {
         File parent = file.getParentFile();
         if (parent != null && !parent.exists()) parent.mkdirs();
         saveResource(path, false);
+    }
+
+    /**
+     * 1.3.0 separa el menú público en VIEW_ONLY e INTERACTIVE. Para no perder
+     * ninguna personalización previa, la primera carga copia las antiguas
+     * secciones menus.main/detail/page-buttons a las dos nuevas variantes.
+     */
+    private void migrateLegacyMenuConfig() {
+        boolean changed = false;
+        boolean viewerMigrated = copySectionIfMissing("menus.main", "menus.viewer.main");
+        changed |= viewerMigrated;
+        if (viewerMigrated) {
+            // La vista pública mantiene el diseño anterior, pero elimina cualquier
+            // instrucción de click y redirige entregas/reclamaciones al NPC.
+            getConfig().set("menus.viewer.main.mission-lore.details", "");
+            getConfig().set("menus.viewer.main.mission-lore.completed",
+                    "&aMisión completada. &7Visita al encargado para reclamarla.");
+            getConfig().set("menus.viewer.main.mission-lore.delivery-pending",
+                    "&eEntrega los objetos con el encargado de misiones.");
+        }
+        changed |= copySectionIfMissing("menus.main", "menus.interactive.main");
+        changed |= copySectionIfMissing("menus.page-buttons", "menus.viewer.page-buttons");
+        changed |= copySectionIfMissing("menus.page-buttons", "menus.interactive.page-buttons");
+        changed |= copySectionIfMissing("menus.detail", "menus.interactive.detail");
+        changed |= copyValueIfMissing("menus.back-command", "menus.viewer.back-command");
+        changed |= copyValueIfMissing("menus.back-command", "menus.interactive.back-command");
+        changed |= migrateLegacyCompletionMessage();
+        if (changed) saveConfig();
+    }
+
+    private boolean migrateLegacyCompletionMessage() {
+        if (!getConfig().contains("messages.mission-completed", true)) return false;
+        String current = getConfig().getString("messages.mission-completed", "");
+        String normalized = current == null ? "" : current.toLowerCase(java.util.Locale.ROOT);
+        if (!normalized.contains("abre &f/misiones") && !normalized.contains("abre /misiones")) return false;
+        getConfig().set("messages.mission-completed",
+                "&a&lMision completada: &f%mission% &7Visita al encargado de misiones para reclamarla antes de que expire.");
+        return true;
+    }
+
+    private boolean copySectionIfMissing(String sourcePath, String targetPath) {
+        if (getConfig().contains(targetPath, true)) return false;
+        ConfigurationSection source = getConfig().getConfigurationSection(sourcePath);
+        if (source == null) return false;
+        for (String key : source.getKeys(true)) {
+            if (source.isConfigurationSection(key)) continue;
+            getConfig().set(targetPath + "." + key, source.get(key));
+        }
+        return true;
+    }
+
+    private boolean copyValueIfMissing(String sourcePath, String targetPath) {
+        if (getConfig().contains(targetPath, true) || !getConfig().contains(sourcePath, true)) return false;
+        getConfig().set(targetPath, getConfig().get(sourcePath));
+        return true;
     }
 
     public QuestDatabase getDatabase() { return database; }

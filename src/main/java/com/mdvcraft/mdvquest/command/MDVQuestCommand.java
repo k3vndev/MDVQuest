@@ -39,7 +39,7 @@ public final class MDVQuestCommand implements CommandExecutor, TabCompleter {
                 plugin.message(player, "no-permission", Map.of());
                 return true;
             }
-            plugin.getMenuManager().openMain(player);
+            plugin.getMenuManager().openViewer(player);
             return true;
         }
 
@@ -65,6 +65,13 @@ public final class MDVQuestCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
+        boolean interactiveCommand = sub.equals("npc") || sub.equals("interactive")
+                || sub.equals("interactivo") || sub.equals("completo") || sub.equals("full");
+        if (interactiveCommand) {
+            handleInteractiveMenu(sender, args);
+            return true;
+        }
+
         if (!sender.hasPermission("mdvquest.admin")) {
             sender.sendMessage(plugin.prefix() + ColorUtil.color("&cNo tienes permiso."));
             return true;
@@ -84,6 +91,36 @@ public final class MDVQuestCommand implements CommandExecutor, TabCompleter {
             default -> help(sender);
         }
         return true;
+    }
+
+    private void handleInteractiveMenu(CommandSender sender, String[] args) {
+        if (!sender.hasPermission("mdvquest.admin.open-interactive") && !sender.hasPermission("mdvquest.admin")) {
+            plugin.message(sender, "no-permission", Map.of());
+            return;
+        }
+
+        Player target;
+        if (args.length >= 2) {
+            target = Bukkit.getPlayerExact(args[1]);
+            if (target == null) {
+                sender.sendMessage(plugin.prefix() + ColorUtil.color("&cJugador desconectado o inexistente."));
+                return;
+            }
+        } else if (sender instanceof Player player) {
+            target = player;
+        } else {
+            sender.sendMessage("Usa /mdvquest npc <jugador> desde consola.");
+            return;
+        }
+
+        if (!target.hasPermission("mdvquest.use")) {
+            plugin.message(sender, "interactive-target-no-permission", Map.of("player", target.getName()));
+            return;
+        }
+        plugin.getMenuManager().openInteractive(target);
+        if (!sender.equals(target)) {
+            plugin.message(sender, "interactive-opened", Map.of("player", target.getName()));
+        }
     }
 
     private void handleForce(CommandSender sender, String[] args) {
@@ -217,6 +254,7 @@ public final class MDVQuestCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage(ColorUtil.color("&e/mdvquest &7- abre el menu"));
         sender.sendMessage(ColorUtil.color("&e/mdvquest admin &7- catálogo y editor visual"));
         sender.sendMessage(ColorUtil.color("&e/mdvquest crear &7- crea una misión"));
+        sender.sendMessage(ColorUtil.color("&e/mdvquest npc [jugador] &7- abre el menú interactivo completo"));
         sender.sendMessage(ColorUtil.color("&e/mdvquest reload"));
         sender.sendMessage(ColorUtil.color("&e/mdvquest status"));
         sender.sendMessage(ColorUtil.color("&e/mdvquest force <id-de-mision>"));
@@ -235,14 +273,21 @@ public final class MDVQuestCommand implements CommandExecutor, TabCompleter {
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         boolean editor = sender.hasPermission("mdvquest.editor") || sender.hasPermission("mdvquest.admin");
         boolean admin = sender.hasPermission("mdvquest.admin");
-        if (!editor && !admin) return Collections.emptyList();
+        boolean interactive = sender.hasPermission("mdvquest.admin.open-interactive") || admin;
+        if (!editor && !admin && !interactive) return Collections.emptyList();
         if (args.length == 1) {
             List<String> options = new ArrayList<>();
             if (editor) options.addAll(List.of("admin", "crear"));
+            if (interactive) options.add("npc");
             if (admin) options.addAll(List.of("reload", "status", "force", "reroll", "rotate", "event", "profexp", "report"));
             return filter(options, args[0]);
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("admin") && editor) return filter(List.of("crear"), args[1]);
+        if (args.length == 2 && interactive && (args[0].equalsIgnoreCase("npc") || args[0].equalsIgnoreCase("interactive")
+                || args[0].equalsIgnoreCase("interactivo") || args[0].equalsIgnoreCase("completo")
+                || args[0].equalsIgnoreCase("full"))) {
+            return filter(Bukkit.getOnlinePlayers().stream().map(Player::getName).toList(), args[1]);
+        }
         if (!admin) return Collections.emptyList();
         if (args.length == 2 && (args[0].equalsIgnoreCase("force") || args[0].equalsIgnoreCase("forzar"))) {
             return filter(plugin.getRegistry().missions().stream().map(mission -> mission.id()).toList(), args[1]);

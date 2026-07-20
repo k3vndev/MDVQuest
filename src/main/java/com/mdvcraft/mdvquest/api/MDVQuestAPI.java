@@ -36,9 +36,20 @@ public final class MDVQuestAPI {
     }
 
     public static boolean openMenu(Player player) {
+        return openViewerMenu(player);
+    }
+
+    public static boolean openViewerMenu(Player player) {
         MDVQuestPlugin plugin = plugin();
         if (plugin == null || player == null) return false;
-        plugin.getMenuManager().openMain(player);
+        plugin.getMenuManager().openViewer(player);
+        return true;
+    }
+
+    public static boolean openInteractiveMenu(Player player) {
+        MDVQuestPlugin plugin = plugin();
+        if (plugin == null || player == null) return false;
+        plugin.getMenuManager().openInteractive(player);
         return true;
     }
 }

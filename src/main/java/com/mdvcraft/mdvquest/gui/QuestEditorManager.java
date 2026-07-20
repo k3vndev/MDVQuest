@@ -48,6 +48,7 @@ import java.util.UUID;
 
 /** Editor y catálogo administrativo completamente in-game. */
 public final class QuestEditorManager implements Listener {
+    private static final String ALL_FILES = "*";
     private static final int[] ADMIN_CATEGORY_SLOTS = {9, 18, 27, 36};
     private static final int[] ADMIN_MISSION_SLOTS = {
             10,11,12,13,14,15,16,17,
@@ -70,6 +71,7 @@ public final class QuestEditorManager implements Listener {
     private final MythicItemsHook mythicItems;
     private final Map<UUID, QuestDraft> drafts = new HashMap<>();
     private final Map<UUID, EditorSession> sessions = new HashMap<>();
+    private final Map<UUID, CatalogContext> catalogContexts = new HashMap<>();
 
     private final NamespacedKey actionKey;
     private final NamespacedKey indexKey;
@@ -207,12 +209,21 @@ public final class QuestEditorManager implements Listener {
             plugin.message(player, "no-permission", Map.of());
             return;
         }
-        openAdminCatalog(player, DurationGroup.ONE_DAY, 1);
+        openAdminCatalog(player, DurationGroup.ONE_DAY, 1, ALL_FILES);
     }
 
     private void openAdminCatalog(Player player, DurationGroup group, int requestedPage) {
+        CatalogContext context = catalogContexts.get(player.getUniqueId());
+        String fileFilter = context == null ? ALL_FILES : context.fileFilter();
+        openAdminCatalog(player, group, requestedPage, fileFilter);
+    }
+
+    private void openAdminCatalog(Player player, DurationGroup group, int requestedPage, String requestedFileFilter) {
+        List<String> fileOptions = adminFileOptions();
+        String fileFilter = normalizeFileFilter(requestedFileFilter, fileOptions);
         List<MissionDefinition> filtered = plugin.getRegistry().missions().stream()
                 .filter(mission -> group.accepts(plugin.getRegistry().durationDays(mission)))
+                .filter(mission -> ALL_FILES.equals(fileFilter) || mission.sourceFile().equalsIgnoreCase(fileFilter))
                 .sorted(Comparator.comparing(MissionDefinition::sourceFile).thenComparing(MissionDefinition::id))
                 .toList();
         int pages = Math.max(1, (int) Math.ceil(filtered.size() / (double) ADMIN_MISSION_SLOTS.length));
@@ -222,7 +233,10 @@ public final class QuestEditorManager implements Listener {
         DurationGroup[] groups = DurationGroup.values();
         for (int i = 0; i < groups.length; i++) {
             DurationGroup option = groups[i];
-            long count = plugin.getRegistry().missions().stream().filter(m -> option.accepts(plugin.getRegistry().durationDays(m))).count();
+            long count = plugin.getRegistry().missions().stream()
+                    .filter(m -> option.accepts(plugin.getRegistry().durationDays(m)))
+                    .filter(m -> ALL_FILES.equals(fileFilter) || m.sourceFile().equalsIgnoreCase(fileFilter))
+                    .count();
             inventory.setItem(ADMIN_CATEGORY_SLOTS[i], item(option == group ? Material.WRITABLE_BOOK : Material.BOOK,
                     (option == group ? "&a" : "&e") + option.display(), List.of("&7Misiones: &f" + count),
                     "ADMIN_GROUP", -1, 1, option, null, null));
@@ -237,8 +251,13 @@ public final class QuestEditorManager implements Listener {
         inventory.setItem(49, item(Material.NETHER_STAR, "&aCrear nueva misión", List.of("&7Abre el selector de duración."), "NEW_MISSION", -1, 1, null, null, null));
         if (pages > 1 && page < pages) inventory.setItem(51, item(Material.ARROW, "&aPágina siguiente", List.of(), "ADMIN_PAGE", -1, page + 1, group, null, null));
         inventory.setItem(45, backHead("ADMIN_BACK", "&eVolver", List.of("&7Regresa al menú anterior.")));
+        int filterSlot = plugin.getConfig().getInt("editor.admin-catalog.file-filter.slot", 46);
+        if (filterSlot >= 0 && filterSlot < inventory.getSize()) {
+            inventory.setItem(filterSlot, adminFileFilterItem(fileFilter, fileOptions));
+        }
         inventory.setItem(53, item(Material.BARRIER, "&cCerrar", List.of(), "CLOSE", -1, 1, null, null, null));
-        open(player, inventory, MenuType.ADMIN_CATALOG, page, group, null);
+        catalogContexts.put(player.getUniqueId(), new CatalogContext(group, page, fileFilter));
+        open(player, inventory, MenuType.ADMIN_CATALOG, page, group, null, fileFilter);
     }
 
     private void openAdminPreview(Player player, MissionDefinition mission) {
@@ -259,7 +278,75 @@ public final class QuestEditorManager implements Listener {
         inventory.setItem(45, backHead("ADMIN_CATALOG", "&eVolver", List.of("&7Regresa al catálogo.")));
         inventory.setItem(49, item(Material.ANVIL, "&aEditar esta misión", List.of("&7Abre todos sus valores en el editor."), "EDIT_MISSION", -1, 1, null, null, mission.id()));
         inventory.setItem(53, item(Material.BARRIER, "&cCerrar", List.of(), "CLOSE", -1, 1, null, null, null));
-        open(player, inventory, MenuType.ADMIN_PREVIEW, 1, groupFor(mission), mission.id());
+        CatalogContext context = catalogContexts.getOrDefault(player.getUniqueId(),
+                new CatalogContext(groupFor(mission), 1, ALL_FILES));
+        open(player, inventory, MenuType.ADMIN_PREVIEW, context.page(), context.group(), mission.id(), context.fileFilter());
+    }
+
+    private ItemStack adminFileFilterItem(String fileFilter, List<String> options) {
+        int index = Math.max(0, options.indexOf(fileFilter));
+        String generalName = plugin.getConfig().getString(
+                "editor.admin-catalog.file-filter.general-name", "General - todos los YAML");
+        String display = ALL_FILES.equals(fileFilter) ? generalName : fileFilter;
+        Map<String, String> replacements = Map.of(
+                "file", display,
+                "index", String.valueOf(index + 1),
+                "total", String.valueOf(options.size())
+        );
+        Material configured = Material.matchMaterial(plugin.getConfig().getString(
+                "editor.admin-catalog.file-filter.material", "HOPPER"));
+        if (configured == null || configured.isAir()) configured = Material.HOPPER;
+        String name = replace(plugin.getConfig().getString(
+                "editor.admin-catalog.file-filter.name", "&eFiltrar por archivo YAML"), replacements);
+        List<String> configuredLore = plugin.getConfig().getStringList("editor.admin-catalog.file-filter.lore");
+        if (configuredLore.isEmpty()) configuredLore = List.of(
+                "&7Archivo actual:",
+                "&f%file%",
+                "",
+                "&7Opción: &f%index%/%total%",
+                "",
+                "&eClick izquierdo: siguiente",
+                "&eClick derecho: anterior",
+                "&eShift-click: mostrar todos"
+        );
+        List<String> finalLore = configuredLore.stream().map(line -> replace(line, replacements)).toList();
+        return item(configured, name, finalLore, "ADMIN_FILE_FILTER", -1, 1, null, null, fileFilter);
+    }
+
+    private void cycleAdminFileFilter(Player player, InventoryClickEvent event, EditorSession session) {
+        List<String> options = adminFileOptions();
+        if (event.isShiftClick()) {
+            openAdminCatalog(player, session.group(), 1, ALL_FILES);
+            return;
+        }
+        String current = normalizeFileFilter(session.fileFilter(), options);
+        int index = Math.max(0, options.indexOf(current));
+        int direction = event.isRightClick() ? -1 : 1;
+        int next = Math.floorMod(index + direction, options.size());
+        openAdminCatalog(player, session.group(), 1, options.get(next));
+    }
+
+    private List<String> adminFileOptions() {
+        List<String> result = new ArrayList<>();
+        result.add(ALL_FILES);
+        for (String file : yamlService.files()) {
+            if (file == null || file.isBlank()) continue;
+            if (result.stream().noneMatch(existing -> existing.equalsIgnoreCase(file))) result.add(file);
+        }
+        return result;
+    }
+
+    private String normalizeFileFilter(String requested, List<String> options) {
+        if (requested == null || requested.isBlank() || ALL_FILES.equals(requested)) return ALL_FILES;
+        return options.stream().filter(option -> option.equalsIgnoreCase(requested)).findFirst().orElse(ALL_FILES);
+    }
+
+    private String replace(String value, Map<String, String> replacements) {
+        String result = value == null ? "" : value;
+        for (Map.Entry<String, String> entry : replacements.entrySet()) {
+            result = result.replace("%" + entry.getKey() + "%", entry.getValue());
+        }
+        return result;
     }
 
     private void openObjectiveCatalog(Player player, int requestedPage) {
@@ -418,9 +505,10 @@ public final class QuestEditorManager implements Listener {
             case "CLOSE" -> player.closeInventory();
             case "DURATION" -> selectDuration(player, index);
             case "DURATION_BACK" -> { if (drafts.containsKey(player.getUniqueId())) openEditor(player); else openAdminCatalog(player); }
-            case "ADMIN_CATALOG" -> openAdminCatalog(player, group, 1);
-            case "ADMIN_GROUP" -> openAdminCatalog(player, group, 1);
-            case "ADMIN_PAGE" -> openAdminCatalog(player, group, page);
+            case "ADMIN_CATALOG" -> openAdminCatalog(player, group, session.page(), session.fileFilter());
+            case "ADMIN_GROUP" -> openAdminCatalog(player, group, 1, session.fileFilter());
+            case "ADMIN_PAGE" -> openAdminCatalog(player, group, page, session.fileFilter());
+            case "ADMIN_FILE_FILTER" -> cycleAdminFileFilter(player, event, session);
             case "ADMIN_BACK" -> player.closeInventory();
             case "NEW_MISSION" -> { drafts.remove(player.getUniqueId()); openDurationPicker(player); }
             case "ADMIN_MISSION" -> {
@@ -429,7 +517,8 @@ public final class QuestEditorManager implements Listener {
                 else openAdminPreview(player, mission);
             }
             case "EDIT_MISSION" -> editMission(player, plugin.getRegistry().mission(missionId));
-            case "EDITOR", "EDITOR_BACK" -> openEditor(player);
+            case "EDITOR" -> openEditor(player);
+            case "EDITOR_BACK" -> returnToAdminCatalog(player);
             case "EDIT_ID" -> promptId(player);
             case "EDIT_NAME" -> promptName(player);
             case "EDIT_LORE" -> promptLore(player);
@@ -455,8 +544,17 @@ public final class QuestEditorManager implements Listener {
             case "FILE_NEW" -> promptFile(player);
             case "SAVE_DRAFT" -> saveDraft(player);
             case "RESET_DRAFT" -> { draft(player).resetKeepingDuration(); openEditor(player); }
-            case "CANCEL_DRAFT" -> { drafts.remove(player.getUniqueId()); openAdminCatalog(player); }
+            case "CANCEL_DRAFT" -> {
+                drafts.remove(player.getUniqueId());
+                returnToAdminCatalog(player);
+            }
         }
+    }
+
+    private void returnToAdminCatalog(Player player) {
+        CatalogContext context = catalogContexts.get(player.getUniqueId());
+        if (context == null) openAdminCatalog(player);
+        else openAdminCatalog(player, context.group(), context.page(), context.fileFilter());
     }
 
     private void handleRewardInventoryClick(InventoryClickEvent event, Player player, EditorSession session) {
@@ -638,6 +736,7 @@ public final class QuestEditorManager implements Listener {
             cleanupVirtualRewards(event.getPlayer());
         }
         drafts.remove(event.getPlayer().getUniqueId());
+        catalogContexts.remove(event.getPlayer().getUniqueId());
     }
 
     private void selectDuration(Player player, int days) {
@@ -729,7 +828,9 @@ public final class QuestEditorManager implements Listener {
         if (type == null || type == ObjectiveType.CLAN_KILL) { openObjectiveCatalog(player, 1); return; }
         QuestDraft draft = draft(player);
         int configuredMax = Math.max(1, plugin.getConfig().getInt("editor.max-objectives-per-mission", 7));
-        int visualMax = plugin.getConfig().getIntegerList("menus.detail.objective-slots").size();
+        List<Integer> visualSlots = plugin.getConfig().getIntegerList("menus.interactive.detail.objective-slots");
+        if (visualSlots.isEmpty()) visualSlots = plugin.getConfig().getIntegerList("menus.detail.objective-slots");
+        int visualMax = visualSlots.size();
         int maxObjectives = visualMax <= 0 ? configuredMax : Math.min(configuredMax, visualMax);
         if (editIndex < 0 && draft.objectives().size() >= maxObjectives) {
             player.sendMessage(plugin.prefix() + "§cEsta versión admite hasta §f" + maxObjectives + " §cobjetivos por misión para que todos entren en el menú de detalles.");
@@ -1024,6 +1125,7 @@ public final class QuestEditorManager implements Listener {
 
     private void saveDraft(Player player) {
         QuestDraft draft = draft(player);
+        DurationGroup targetGroup = groupForDays(draft.durationDays());
         QuestYamlService.SaveResult result = yamlService.save(draft);
         if (!result.success()) {
             player.sendMessage(plugin.prefix() + "§c" + result.message());
@@ -1035,7 +1137,7 @@ public final class QuestEditorManager implements Listener {
         drafts.remove(player.getUniqueId());
         player.sendMessage(plugin.prefix() + "§a" + result.message());
         plugin.getSocialHook().sound(player, "confirm");
-        openAdminCatalog(player, groupForDays(draft.durationDays()), 1);
+        openAdminCatalog(player, targetGroup, 1, result.fileName());
     }
 
     private QuestDraft draft(Player player) {
@@ -1281,7 +1383,13 @@ public final class QuestEditorManager implements Listener {
     }
 
     private void open(Player player, Inventory inventory, MenuType type, int page, DurationGroup group, String missionId) {
-        sessions.put(player.getUniqueId(), new EditorSession(inventory, type, page, group, missionId));
+        open(player, inventory, type, page, group, missionId, ALL_FILES);
+    }
+
+    private void open(Player player, Inventory inventory, MenuType type, int page, DurationGroup group,
+                      String missionId, String fileFilter) {
+        sessions.put(player.getUniqueId(), new EditorSession(inventory, type, page, group, missionId,
+                fileFilter == null || fileFilter.isBlank() ? ALL_FILES : fileFilter));
         InventoryView view = player.openInventory(inventory);
         if (view == null) sessions.remove(player.getUniqueId());
         else plugin.getSocialHook().sound(player, "open");
@@ -1292,7 +1400,9 @@ public final class QuestEditorManager implements Listener {
         XP_REWARDS, FILE_CHOOSER, ADMIN_CATALOG, ADMIN_PREVIEW
     }
 
-    private record EditorSession(Inventory inventory, MenuType type, int page, DurationGroup group, String missionId) { }
+    private record EditorSession(Inventory inventory, MenuType type, int page, DurationGroup group,
+                                 String missionId, String fileFilter) { }
+    private record CatalogContext(DurationGroup group, int page, String fileFilter) { }
 
     private static final class ObjectiveWizard {
         private final ObjectiveType type;

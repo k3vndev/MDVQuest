@@ -1,5 +1,5 @@
 name: MDVQuest
-version: 1.2.5
+version: 1.3.0
 main: com.mdvcraft.mdvquest.MDVQuestPlugin
 api-version: '1.21'
 author: MDVCRAFT
@@ -20,7 +20,7 @@ commands:
     aliases: [misiones, quests, quest]
 permissions:
   mdvquest.use:
-    description: Permite consultar y reclamar misiones.
+    description: Permite consultar el progreso de las misiones y usar sus menús.
     default: true
   mdvquest.admin:
     description: Permite recargar, administrar y reportar progreso manualmente.
@@ -29,6 +29,7 @@ permissions:
       mdvquest.editor: true
       mdvquest.admin.reroll: true
       mdvquest.admin.force: true
+      mdvquest.admin.open-interactive: true
   mdvquest.editor:
     description: Permite usar el catálogo y editor visual de misiones sin comandos técnicos.
     default: op
@@ -37,6 +38,9 @@ permissions:
     default: op
   mdvquest.admin.force:
     description: Permite añadir una misión concreta a su rotación global actual sin borrar progreso.
+    default: op
+  mdvquest.admin.open-interactive:
+    description: Permite abrir el menú interactivo completo para uno mismo u otro jugador.
     default: op
   mdvquest.access.vip1:
     description: Permite reclamar recompensas de instancias VIP1.

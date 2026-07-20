@@ -1,11 +1,47 @@
-# Checklist de staging — MDVQuest 1.2.4
+# Checklist MDVQuest 1.3.0
+
+## Menús viewer e interactivo
+
+- [ ] `/quest`, `/quests`, `/misiones` y `/mdvquest` abren el mismo visor público.
+- [ ] El botón de MDVSocial abre el visor público.
+- [ ] Hacer clic sobre una misión en VIEW_ONLY no abre detalles ni reclama recompensas.
+- [ ] Una misión de entrega en VIEW_ONLY no consume objetos.
+- [ ] Una misión completada en VIEW_ONLY indica que debe visitarse al encargado.
+- [ ] `/mdvquest npc` abre el menú interactivo al administrador.
+- [ ] Desde consola, `mdvquest npc <jugador>` abre el menú interactivo del jugador conectado.
+- [ ] En INTERACTIVE se abren detalles, se entregan objetos y se reclaman premios como en 1.2.5.
+- [ ] Un jugador sin `mdvquest.admin.open-interactive` no puede ejecutar el comando administrativo.
+- [ ] Cambiar título, slots o materiales de `menus.viewer` no altera `menus.interactive`.
+- [ ] Cambiar título, slots o materiales de `menus.interactive` no altera `menus.viewer`.
+
+## Filtro del catálogo administrativo
+
+- [ ] `/mdvquest admin` abre siempre con General/todos los YAML.
+- [ ] El botón de filtro aparece en el slot 46 por defecto.
+- [ ] Clic izquierdo avanza al siguiente YAML.
+- [ ] Clic derecho vuelve al YAML anterior.
+- [ ] Shift-click restablece General.
+- [ ] El filtro se combina correctamente con las cuatro categorías de duración.
+- [ ] El filtro se conserva al cambiar página y regresar desde una vista previa.
+- [ ] Al guardar o mover una misión, se abre el YAML de destino.
+
+## Migración desde 1.2.x
+
+- [ ] Conservar un `config.yml` personalizado de 1.2.x y arrancar 1.3.0.
+- [ ] Confirmar que el diseño anterior se copie a `menus.viewer` y `menus.interactive`.
+- [ ] Confirmar que `menus.interactive.detail` conserve el detalle anterior.
+- [ ] Confirmar que no cambien misiones, familias, rotaciones, progreso ni SQLite.
+
+---
+
+# Checklist de staging — base completa MDVQuest 1.3.0
 
 Prueba esta versión en una copia de Purpur 1.21.6 antes de producción.
 
 ## Arranque y migración
 
 - [ ] El servidor inicia sin `NoSuchMethodError`.
-- [ ] `/mdvquest status` muestra versión 1.2.4.
+- [ ] `/mdvquest status` muestra versión 1.3.0.
 - [ ] Las misiones y el progreso existentes de 1.2.0 permanecen.
 - [ ] `/mdvquest` abre el menú público.
 - [ ] `/mdvquest admin` exige `mdvquest.admin`.

@@ -87,25 +87,47 @@ public final class QuestMenuManager implements Listener {
         this.groupKey = new NamespacedKey(plugin, "duration_group");
     }
 
+    /** Compatibilidad: el menú público normal siempre abre la variante de consulta. */
     public void openMain(Player player) {
-        openMain(player, DurationGroup.ONE_DAY, 1);
+        openViewer(player);
+    }
+
+    public void openViewer(Player player) {
+        openMain(player, MenuMode.VIEW_ONLY, DurationGroup.ONE_DAY, 1);
+    }
+
+    public void openInteractive(Player player) {
+        openMain(player, MenuMode.INTERACTIVE, DurationGroup.ONE_DAY, 1);
     }
 
     public void openMain(Player player, int requestedPage) {
         MenuSession current = sessions.get(player.getUniqueId());
         DurationGroup group = current == null ? DurationGroup.ONE_DAY : current.group();
-        openMain(player, group, requestedPage);
+        MenuMode mode = current == null ? MenuMode.VIEW_ONLY : current.mode();
+        openMain(player, mode, group, requestedPage);
     }
 
-    public void openMain(Player player, DurationGroup group, int requestedPage) {
+    public void openViewer(Player player, int requestedPage) {
+        MenuSession current = sessions.get(player.getUniqueId());
+        DurationGroup group = current == null ? DurationGroup.ONE_DAY : current.group();
+        openMain(player, MenuMode.VIEW_ONLY, group, requestedPage);
+    }
+
+    public void openInteractive(Player player, int requestedPage) {
+        MenuSession current = sessions.get(player.getUniqueId());
+        DurationGroup group = current == null ? DurationGroup.ONE_DAY : current.group();
+        openMain(player, MenuMode.INTERACTIVE, group, requestedPage);
+    }
+
+    private void openMain(Player player, MenuMode mode, DurationGroup group, int requestedPage) {
         List<MissionInstance> all = rotations.activeInstances();
         if (all.isEmpty()) {
             plugin.message(player, "no-active-missions", Map.of());
             return;
         }
 
-        int[] categorySlots = slots("menus.main.category-slots", DEFAULT_CATEGORY_SLOTS);
-        int[] missionSlots = slots("menus.main.mission-slots", DEFAULT_MISSION_SLOTS);
+        int[] categorySlots = modeSlots(mode, "main.category-slots", DEFAULT_CATEGORY_SLOTS);
+        int[] missionSlots = modeSlots(mode, "main.mission-slots", DEFAULT_MISSION_SLOTS);
         if (missionSlots.length == 0) missionSlots = DEFAULT_MISSION_SLOTS;
 
         List<MissionInstance> filtered = all.stream()
@@ -118,9 +140,11 @@ public final class QuestMenuManager implements Listener {
 
         int pages = Math.max(1, (int) Math.ceil(filtered.size() / (double) missionSlots.length));
         int page = Math.max(1, Math.min(pages, requestedPage));
-        int size = menuSize("menus.main.size", 54);
-        String title = text("menus.main.title", plugin.getConfig().getString("menus.title", "&8Misiones"), Map.of());
-        Inventory inventory = plugin.getSocialHook().createInventory(null, title, size, true);
+        int size = modeMenuSize(mode, "main.size", 54);
+        String legacyTitle = plugin.getConfig().getString("menus.title", "&8Misiones");
+        String title = modeText(mode, "main.title", legacyTitle, Map.of());
+        Inventory inventory = plugin.getSocialHook().createInventory(null, title, size,
+                modeBoolean(mode, "main.fill", true));
 
         DurationGroup[] groups = DurationGroup.values();
         long now = System.currentTimeMillis();
@@ -133,40 +157,41 @@ public final class QuestMenuManager implements Listener {
                     .toList();
             long completed = categoryMissions.stream().filter(instance -> progress.isMissionComplete(player, instance)).count();
             long nextReset = nextResetAt(option, now);
-            inventory.setItem(slot, categoryItem(option, option == group, completed, categoryMissions.size(), nextReset, now));
+            inventory.setItem(slot, categoryItem(mode, option, option == group, completed, categoryMissions.size(), nextReset, now));
         }
 
-        int[] separatorSlots = slots("menus.main.separator-slots", DEFAULT_SEPARATOR_SLOTS);
+        int[] separatorSlots = modeSlots(mode, "main.separator-slots", DEFAULT_SEPARATOR_SLOTS);
         for (int i = 0; i < separatorSlots.length && i < groups.length; i++) {
             int slot = separatorSlots[i];
             if (!validSlot(slot, size)) continue;
-            boolean selected = groups[i] == group;
-            inventory.setItem(slot, separatorItem(selected));
+            inventory.setItem(slot, separatorItem(mode, groups[i] == group));
         }
 
         int start = (page - 1) * missionSlots.length;
         for (int i = 0; i < missionSlots.length && start + i < filtered.size(); i++) {
             int slot = missionSlots[i];
-            if (validSlot(slot, size)) inventory.setItem(slot, missionItem(player, filtered.get(start + i), now));
+            if (validSlot(slot, size)) inventory.setItem(slot, missionItem(player, filtered.get(start + i), now, mode));
         }
 
         if (pages > 1 && page > 1) {
-            int slot = plugin.getConfig().getInt("menus.main.previous-page-slot", 45);
-            if (validSlot(slot, size)) inventory.setItem(slot, pageArrow(false, "MAIN_PAGE", null, page - 1, page, pages, group));
+            int slot = modeInt(mode, "main.previous-page-slot", 45);
+            if (validSlot(slot, size)) inventory.setItem(slot,
+                    pageArrow(mode, false, "MAIN_PAGE", null, page - 1, page, pages, group));
         }
         if (pages > 1 && page < pages) {
-            int slot = plugin.getConfig().getInt("menus.main.next-page-slot", 53);
-            if (validSlot(slot, size)) inventory.setItem(slot, pageArrow(true, "MAIN_PAGE", null, page + 1, page, pages, group));
+            int slot = modeInt(mode, "main.next-page-slot", 53);
+            if (validSlot(slot, size)) inventory.setItem(slot,
+                    pageArrow(mode, true, "MAIN_PAGE", null, page + 1, page, pages, group));
         }
 
-        int backSlot = plugin.getConfig().getInt("menus.main.back-slot", 49);
+        int backSlot = modeInt(mode, "main.back-slot", 49);
         if (validSlot(backSlot, size)) {
             inventory.setItem(backSlot, backHead("SOCIAL_BACK",
-                    text("menus.main.back-button.name", "&eVolver", Map.of()),
-                    lore("menus.main.back-button.lore", List.of("&7Regresa al menú de /social."), Map.of()), group));
+                    modeText(mode, "main.back-button.name", "&eVolver", Map.of()),
+                    modeLore(mode, "main.back-button.lore", List.of("&7Regresa al menú de /social."), Map.of()), group));
         }
 
-        sessions.put(player.getUniqueId(), new MenuSession(inventory, MenuType.MAIN, page, group, null, 1));
+        sessions.put(player.getUniqueId(), new MenuSession(inventory, MenuType.MAIN, mode, page, group, null, 1));
         InventoryView view = player.openInventory(inventory);
         if (view == null) sessions.remove(player.getUniqueId());
         else plugin.getSocialHook().sound(player, "open");
@@ -174,6 +199,7 @@ public final class QuestMenuManager implements Listener {
 
     public void openDetail(Player player, MissionInstance instance) {
         MenuSession current = sessions.get(player.getUniqueId());
+        if (current != null && current.mode() != MenuMode.INTERACTIVE) return;
         int returnPage = current != null && current.type() == MenuType.MAIN ? current.mainPage() : 1;
         openDetail(player, instance, 1, returnPage);
     }
@@ -181,7 +207,7 @@ public final class QuestMenuManager implements Listener {
     private void openDetail(Player player, MissionInstance instance, int rewardPage, int returnPage) {
         if (instance == null || !instance.isActive(System.currentTimeMillis())) {
             plugin.message(player, "mission-expired", Map.of());
-            openMain(player);
+            openInteractive(player);
             return;
         }
         if (progress.isMissionComplete(player, instance) && !progress.claimed(player, instance)
@@ -190,32 +216,34 @@ public final class QuestMenuManager implements Listener {
             return;
         }
 
-        int size = menuSize("menus.detail.size", 54);
+        int size = modeMenuSize(MenuMode.INTERACTIVE, "detail.size", 54);
         Map<String, String> titleValues = Map.of("mission", ColorUtil.strip(instance.definition().name()));
-        String title = text("menus.detail.title",
+        String title = modeText(MenuMode.INTERACTIVE, "detail.title",
                 plugin.getConfig().getString("menus.detail-title", "&8Misión: %mission%"), titleValues);
-        Inventory inventory = plugin.getSocialHook().createInventory(null, title, size, true);
+        Inventory inventory = plugin.getSocialHook().createInventory(null, title, size,
+                modeBoolean(MenuMode.INTERACTIVE, "detail.fill", true));
 
-        int iconSlot = plugin.getConfig().getInt("menus.detail.mission-icon-slot", 4);
-        if (validSlot(iconSlot, size)) inventory.setItem(iconSlot, missionItem(player, instance, System.currentTimeMillis()));
+        int iconSlot = modeInt(MenuMode.INTERACTIVE, "detail.mission-icon-slot", 4);
+        if (validSlot(iconSlot, size)) inventory.setItem(iconSlot,
+                missionItem(player, instance, System.currentTimeMillis(), MenuMode.INTERACTIVE));
 
-        int[] objectiveSlots = slots("menus.detail.objective-slots", DEFAULT_OBJECTIVE_SLOTS);
+        int[] objectiveSlots = modeSlots(MenuMode.INTERACTIVE, "detail.objective-slots", DEFAULT_OBJECTIVE_SLOTS);
         List<ObjectiveDefinition> objectives = instance.definition().objectives();
         for (int i = 0; i < objectiveSlots.length && i < objectives.size(); i++) {
             int slot = objectiveSlots[i];
             if (validSlot(slot, size)) inventory.setItem(slot, objectiveItem(player, instance, objectives.get(i)));
         }
 
-        boolean borderEnabled = plugin.getConfig().getBoolean("menus.detail.reward-border.enabled", true);
+        boolean borderEnabled = modeBoolean(MenuMode.INTERACTIVE, "detail.reward-border.enabled", true);
         if (borderEnabled) {
-            int[] borderSlots = slots("menus.detail.reward-border.slots", DEFAULT_REWARD_BORDER_SLOTS);
-            Material borderMaterial = material("menus.detail.reward-border.material", Material.LIME_STAINED_GLASS_PANE);
-            String borderName = text("menus.detail.reward-border.name", " ", Map.of());
+            int[] borderSlots = modeSlots(MenuMode.INTERACTIVE, "detail.reward-border.slots", DEFAULT_REWARD_BORDER_SLOTS);
+            Material borderMaterial = modeMaterial(MenuMode.INTERACTIVE, "detail.reward-border.material", Material.LIME_STAINED_GLASS_PANE);
+            String borderName = modeText(MenuMode.INTERACTIVE, "detail.reward-border.name", " ", Map.of());
             ItemStack border = actionItem(borderMaterial, borderName, List.of(), "NONE", null, null, 1, null);
             for (int slot : borderSlots) if (validSlot(slot, size)) inventory.setItem(slot, border);
         }
 
-        int[] rewardSlots = slots("menus.detail.reward-slots", DEFAULT_REWARD_SLOTS);
+        int[] rewardSlots = modeSlots(MenuMode.INTERACTIVE, "detail.reward-slots", DEFAULT_REWARD_SLOTS);
         if (rewardSlots.length == 0) rewardSlots = DEFAULT_REWARD_SLOTS;
         List<ItemStack> rewardPreview = rewardPreview(instance.definition().rewards());
         int rewardPages = Math.max(1, (int) Math.ceil(rewardPreview.size() / (double) rewardSlots.length));
@@ -228,48 +256,49 @@ public final class QuestMenuManager implements Listener {
 
         DurationGroup group = groupFor(instance);
         if (rewardPages > 1 && actualRewardPage > 1) {
-            int slot = plugin.getConfig().getInt("menus.detail.previous-reward-page-slot", 45);
+            int slot = modeInt(MenuMode.INTERACTIVE, "detail.previous-reward-page-slot", 45);
             if (validSlot(slot, size)) inventory.setItem(slot,
-                    pageArrow(false, "REWARD_PAGE", instance.id(), actualRewardPage - 1, actualRewardPage, rewardPages, group));
+                    pageArrow(MenuMode.INTERACTIVE, false, "REWARD_PAGE", instance.id(), actualRewardPage - 1, actualRewardPage, rewardPages, group));
         }
         if (rewardPages > 1 && actualRewardPage < rewardPages) {
-            int slot = plugin.getConfig().getInt("menus.detail.next-reward-page-slot", 53);
+            int slot = modeInt(MenuMode.INTERACTIVE, "detail.next-reward-page-slot", 53);
             if (validSlot(slot, size)) inventory.setItem(slot,
-                    pageArrow(true, "REWARD_PAGE", instance.id(), actualRewardPage + 1, actualRewardPage, rewardPages, group));
+                    pageArrow(MenuMode.INTERACTIVE, true, "REWARD_PAGE", instance.id(), actualRewardPage + 1, actualRewardPage, rewardPages, group));
         }
 
-        int backSlot = plugin.getConfig().getInt("menus.detail.back-slot", 49);
+        int backSlot = modeInt(MenuMode.INTERACTIVE, "detail.back-slot", 49);
         if (validSlot(backSlot, size)) {
             inventory.setItem(backSlot, backHead("BACK",
-                    text("menus.detail.back-button.name", "&eVolver", Map.of()),
-                    lore("menus.detail.back-button.lore", List.of("&7Regresa al catálogo anterior."), Map.of()), group));
+                    modeText(MenuMode.INTERACTIVE, "detail.back-button.name", "&eVolver", Map.of()),
+                    modeLore(MenuMode.INTERACTIVE, "detail.back-button.lore", List.of("&7Regresa al catálogo anterior."), Map.of()), group));
         }
 
-        sessions.put(player.getUniqueId(), new MenuSession(inventory, MenuType.DETAIL, returnPage, group, instance.id(), actualRewardPage));
+        sessions.put(player.getUniqueId(), new MenuSession(inventory, MenuType.DETAIL, MenuMode.INTERACTIVE,
+                returnPage, group, instance.id(), actualRewardPage));
         InventoryView view = player.openInventory(inventory);
         if (view == null) sessions.remove(player.getUniqueId());
         else plugin.getSocialHook().sound(player, "open");
     }
 
-    private ItemStack categoryItem(DurationGroup group, boolean selected, long completed, long total,
+    private ItemStack categoryItem(MenuMode mode, DurationGroup group, boolean selected, long completed, long total,
                                    long nextReset, long now) {
-        String base = "menus.main.categories." + group.configKey();
-        Material configured = material(base + ".material", group.material());
-        String name = text(base + ".name", "&e" + group.display(), Map.of());
+        String base = "main.categories." + group.configKey();
+        Material configured = modeMaterial(mode, base + ".material", group.material());
+        String name = modeText(mode, base + ".name", "&e" + group.display(), Map.of());
         String remaining = nextReset <= 0 ? "Sin rotación programada" : TimeUtil.remaining(nextReset, now);
         Map<String, String> values = Map.of(
                 "completed", String.valueOf(completed),
                 "total", String.valueOf(total),
                 "remaining", remaining
         );
-        List<String> configuredLore = lore(base + ".lore", List.of(
+        List<String> configuredLore = modeLore(mode, base + ".lore", List.of(
                 "&7Completadas: &f%completed%/%total%",
                 "&7Nuevas misiones en: &f%remaining%",
                 "",
                 selected ? "&aCategoría seleccionada." : "&eClick para consultar."
         ), values);
         ItemStack item = actionItem(configured, name, configuredLore, "GROUP", null, null, 1, group);
-        if (selected && plugin.getConfig().getBoolean("menus.main.selected-category-glow", true)) {
+        if (selected && modeBoolean(mode, "main.selected-category-glow", true)) {
             ItemMeta meta = item.getItemMeta();
             if (meta != null) {
                 meta.addEnchant(Enchantment.UNBREAKING, 1, true);
@@ -280,26 +309,26 @@ public final class QuestMenuManager implements Listener {
         return item;
     }
 
-    private ItemStack separatorItem(boolean selected) {
-        Material material = material(selected
-                        ? "menus.main.separator.selected-material"
-                        : "menus.main.separator.material",
+    private ItemStack separatorItem(MenuMode mode, boolean selected) {
+        Material material = modeMaterial(mode, selected
+                        ? "main.separator.selected-material"
+                        : "main.separator.material",
                 selected ? Material.PURPLE_STAINED_GLASS_PANE : Material.BROWN_STAINED_GLASS_PANE);
-        String name = text(selected
-                        ? "menus.main.separator.selected-name"
-                        : "menus.main.separator.name",
+        String name = modeText(mode, selected
+                        ? "main.separator.selected-name"
+                        : "main.separator.name",
                 " ", Map.of());
         return actionItem(material, name, List.of(), "NONE", null, null, 1, null);
     }
 
-    private ItemStack missionItem(Player player, MissionInstance instance, long now) {
+    private ItemStack missionItem(Player player, MissionInstance instance, long now, MenuMode mode) {
         boolean complete = progress.isMissionComplete(player, instance);
         boolean claimed = progress.claimed(player, instance);
         boolean locked = !access.hasAccess(player, instance.accessTier());
         ItemStack item;
-        if (claimed) item = new ItemStack(material("menus.main.mission-state.claimed-material", Material.GRAY_DYE));
+        if (claimed) item = new ItemStack(modeMaterial(mode, "main.mission-state.claimed-material", Material.GRAY_DYE));
         else if (locked) item = new ItemStack(access.lockedMaterial(instance.accessTier()));
-        else if (complete) item = new ItemStack(material("menus.main.mission-state.completed-material", Material.LIME_STAINED_GLASS_PANE));
+        else if (complete) item = new ItemStack(modeMaterial(mode, "main.mission-state.completed-material", Material.LIME_STAINED_GLASS_PANE));
         else {
             item = instance.definition().iconItem();
             if (item == null) {
@@ -312,13 +341,13 @@ public final class QuestMenuManager implements Listener {
 
         List<Component> lore = ItemDisplayUtil.legacyLines(instance.definition().lore());
         lore.add(Component.empty());
-        lore.add(ItemDisplayUtil.legacy(text("menus.main.mission-lore.objectives-header", "&eObjetivos:", Map.of())));
+        lore.add(ItemDisplayUtil.legacy(modeText(mode, "main.mission-lore.objectives-header", "&eObjetivos:", Map.of())));
         for (ObjectiveDefinition objective : instance.definition().objectives()) {
             long value = progress.progress(player, instance, objective);
             boolean objectiveComplete = value >= objective.amount();
-            String state = text(objectiveComplete
-                    ? "menus.main.mission-lore.objective-complete-state"
-                    : "menus.main.mission-lore.objective-pending-state",
+            String state = modeText(mode, objectiveComplete
+                    ? "main.mission-lore.objective-complete-state"
+                    : "main.mission-lore.objective-pending-state",
                     objectiveComplete ? "&a✔ " : "&7• ", Map.of());
             Map<String, String> values = Map.of(
                     "state", state,
@@ -326,13 +355,13 @@ public final class QuestMenuManager implements Listener {
                     "progress", String.valueOf(value),
                     "required", String.valueOf(objective.amount())
             );
-            lore.add(ItemDisplayUtil.legacy(text("menus.main.mission-lore.objective-format",
+            lore.add(ItemDisplayUtil.legacy(modeText(mode, "main.mission-lore.objective-format",
                     "%state%&f%objective% &7(%progress%/%required%)", values)));
         }
-        appendRewardLore(lore, instance.definition().rewards());
+        appendRewardLore(mode, lore, instance.definition().rewards());
         if (!locked && instance.accessTier() != com.mdvcraft.mdvquest.model.AccessTier.NORMAL) {
             lore.add(Component.empty());
-            lore.add(ItemDisplayUtil.legacy(text("menus.main.access." + instance.accessTier().key() + "-line",
+            lore.add(ItemDisplayUtil.legacy(modeText(mode, "main.access." + instance.accessTier().key() + "-line",
                     instance.accessTier() == com.mdvcraft.mdvquest.model.AccessTier.VIP1
                             ? "&b● Misión VIP"
                             : "&e● Misión VIP 2", Map.of(
@@ -343,7 +372,7 @@ public final class QuestMenuManager implements Listener {
         }
         if (locked) {
             lore.add(Component.empty());
-            lore.add(ItemDisplayUtil.legacy(text("menus.main.access.locked-line",
+            lore.add(ItemDisplayUtil.legacy(modeText(mode, "main.access.locked-line",
                     "&b● Necesitas el rango &f%rank% &bpara reclamar esta recompensa.", Map.of(
                             "rank", access.displayName(instance.accessTier()),
                             "permission", access.permission(instance.accessTier()),
@@ -351,47 +380,68 @@ public final class QuestMenuManager implements Listener {
                     ))));
         }
         lore.add(Component.empty());
-        lore.add(ItemDisplayUtil.legacy(text("menus.main.mission-lore.expiration",
+        lore.add(ItemDisplayUtil.legacy(modeText(mode, "main.mission-lore.expiration",
                 "&7Expira en: &f%remaining%", Map.of("remaining", TimeUtil.remaining(instance.expiresAt(), now)))));
-        lore.add(Component.empty());
-        if (claimed) lore.add(ItemDisplayUtil.legacy(text("menus.main.mission-lore.claimed",
-                "&7Recompensa ya reclamada.", Map.of())));
-        else if (complete && !locked) lore.add(ItemDisplayUtil.legacy(text("menus.main.mission-lore.completed",
-                "&a&lClick para recibir la recompensa.", Map.of())));
-        else lore.add(ItemDisplayUtil.legacy(text("menus.main.mission-lore.details",
-                "&eClick para ver más detalles.", Map.of())));
+        String finalLine;
+        if (claimed) {
+            finalLine = modeText(mode, "main.mission-lore.claimed", "&7Recompensa ya reclamada.", Map.of());
+        } else if (complete && !locked) {
+            finalLine = modeText(mode, "main.mission-lore.completed",
+                    mode == MenuMode.VIEW_ONLY
+                            ? "&aMisión completada. &7Visita al encargado para reclamarla."
+                            : "&a&lClick para recibir la recompensa.", Map.of());
+        } else if (mode == MenuMode.VIEW_ONLY && hasPendingDelivery(player, instance)) {
+            finalLine = modeText(mode, "main.mission-lore.delivery-pending",
+                    "&eEntrega los objetos con el encargado de misiones.", Map.of());
+        } else {
+            finalLine = modeText(mode, "main.mission-lore.details",
+                    mode == MenuMode.VIEW_ONLY ? "" : "&eClick para ver más detalles.", Map.of());
+        }
+        if (finalLine != null && !finalLine.isBlank()) {
+            lore.add(Component.empty());
+            lore.add(ItemDisplayUtil.legacy(finalLine));
+        }
 
-        String action = complete && !claimed && !locked ? "CLAIM" : "DETAIL";
+        String action = mode == MenuMode.VIEW_ONLY
+                ? "NONE"
+                : complete && !claimed && !locked ? "CLAIM" : "DETAIL";
         return decorate(item, instance.definition().name(), lore,
                 action, instance.id(), null, 1, groupFor(instance));
+    }
+
+    private boolean hasPendingDelivery(Player player, MissionInstance instance) {
+        for (ObjectiveDefinition objective : instance.definition().objectives()) {
+            if (objective.type().isDelivery() && progress.progress(player, instance, objective) < objective.amount()) return true;
+        }
+        return false;
     }
 
     private ItemStack objectiveItem(Player player, MissionInstance instance, ObjectiveDefinition objective) {
         long value = progress.progress(player, instance, objective);
         boolean complete = value >= objective.amount();
         Material material = complete
-                ? material("menus.detail.objective-state.completed-material", Material.LIME_DYE)
+                ? modeMaterial(MenuMode.INTERACTIVE, "detail.objective-state.completed-material", Material.LIME_DYE)
                 : objective.type().isDelivery()
-                    ? material("menus.detail.objective-state.delivery-material", Material.CHEST)
-                    : material("menus.detail.objective-state.pending-material", Material.PAPER);
+                    ? modeMaterial(MenuMode.INTERACTIVE, "detail.objective-state.delivery-material", Material.CHEST)
+                    : modeMaterial(MenuMode.INTERACTIVE, "detail.objective-state.pending-material", Material.PAPER);
         Map<String, String> values = Map.of(
                 "progress", String.valueOf(value),
                 "required", String.valueOf(objective.amount()),
                 "objective", objective.displayName()
         );
         List<String> lore = new ArrayList<>();
-        lore.add(text("menus.detail.objective-lore.progress", "&7Progreso: &f%progress%&7/&f%required%", values));
+        lore.add(modeText(MenuMode.INTERACTIVE, "detail.objective-lore.progress", "&7Progreso: &f%progress%&7/&f%required%", values));
         if (objective.type().isDelivery() && !complete) {
             lore.add("");
-            lore.add(text("menus.detail.objective-lore.delivery", "&eClick para entregar objetos.", values));
+            lore.add(modeText(MenuMode.INTERACTIVE, "detail.objective-lore.delivery", "&eClick para entregar objetos.", values));
         } else if (complete) {
             lore.add("");
-            lore.add(text("menus.detail.objective-lore.completed", "&aObjetivo completado.", values));
+            lore.add(modeText(MenuMode.INTERACTIVE, "detail.objective-lore.completed", "&aObjetivo completado.", values));
         }
         String action = objective.type().isDelivery() && !complete ? "DELIVER" : "NONE";
-        String objectiveName = text(complete
-                        ? "menus.detail.objective-lore.completed-name"
-                        : "menus.detail.objective-lore.pending-name",
+        String objectiveName = modeText(MenuMode.INTERACTIVE, complete
+                        ? "detail.objective-lore.completed-name"
+                        : "detail.objective-lore.pending-name",
                 complete ? "&a%objective%" : "&e%objective%", values);
         return actionItem(material, objectiveName, lore,
                 action, instance.id(), objective.id(), 1, groupFor(instance));
@@ -405,9 +455,9 @@ public final class QuestMenuManager implements Listener {
                     "amount", String.valueOf(experience.amount()),
                     "target", target
             );
-            result.add(actionItem(material("menus.detail.experience-icon", Material.EXPERIENCE_BOTTLE),
-                    text("menus.detail.experience-name", "&bExperiencia", values),
-                    lore("menus.detail.experience-lore",
+            result.add(actionItem(modeMaterial(MenuMode.INTERACTIVE, "detail.experience-icon", Material.EXPERIENCE_BOTTLE),
+                    modeText(MenuMode.INTERACTIVE, "detail.experience-name", "&bExperiencia", values),
+                    modeLore(MenuMode.INTERACTIVE, "detail.experience-lore",
                             List.of("&7Recibirás &f%amount% EXP", "&7Para: &f%target%"), values),
                     "NONE", null, null, 1, null));
         }
@@ -415,79 +465,79 @@ public final class QuestMenuManager implements Listener {
             ItemStack preview = ItemUtil.hideNativeTooltip(item);
             List<Component> lore = preview.lore() == null ? new ArrayList<>() : new ArrayList<>(preview.lore());
             lore.add(Component.empty());
-            lore.add(ItemDisplayUtil.legacy(text("menus.detail.reward-item-quantity",
+            lore.add(ItemDisplayUtil.legacy(modeText(MenuMode.INTERACTIVE, "detail.reward-item-quantity",
                     "&7Cantidad: &f%amount%", Map.of("amount", String.valueOf(item.getAmount())))));
             preview.lore(lore);
             result.add(preview);
         }
         if (result.isEmpty()) {
-            result.add(actionItem(material("menus.detail.empty-reward.material", Material.CHEST),
-                    text("menus.detail.empty-reward.name", "&eRecompensas", Map.of()),
+            result.add(actionItem(modeMaterial(MenuMode.INTERACTIVE, "detail.empty-reward.material", Material.CHEST),
+                    modeText(MenuMode.INTERACTIVE, "detail.empty-reward.name", "&eRecompensas", Map.of()),
                     reward.displayLore().isEmpty()
-                            ? lore("menus.detail.empty-reward.lore", List.of("&7Recompensa ejecutada por comandos."), Map.of())
+                            ? modeLore(MenuMode.INTERACTIVE, "detail.empty-reward.lore", List.of("&7Recompensa ejecutada por comandos."), Map.of())
                             : reward.displayLore(),
                     "NONE", null, null, 1, null));
         }
         return result;
     }
 
-    private void appendRewardLore(List<Component> lore, RewardDefinition reward) {
+    private void appendRewardLore(MenuMode mode, List<Component> lore, RewardDefinition reward) {
         lore.add(Component.empty());
-        lore.add(ItemDisplayUtil.legacy(text("menus.main.mission-lore.rewards-header", "&eRecompensas:", Map.of())));
+        lore.add(ItemDisplayUtil.legacy(modeText(mode, "main.mission-lore.rewards-header", "&eRecompensas:", Map.of())));
         for (String line : reward.displayLore()) lore.add(ItemDisplayUtil.legacy(line));
         for (RewardDefinition.ExperienceReward exp : reward.experience()) {
             Map<String, String> values = Map.of(
                     "amount", String.valueOf(exp.amount()),
                     "target", professionDisplay(exp.profession())
             );
-            lore.add(ItemDisplayUtil.legacy(text("menus.main.mission-lore.experience-format",
+            lore.add(ItemDisplayUtil.legacy(modeText(mode, "main.mission-lore.experience-format",
                     "&7• &b%amount% EXP &f%target%", values)));
         }
         for (RewardDefinition.VanillaItemReward configured : reward.vanillaItems()) {
             Material material = Material.matchMaterial(configured.material());
             if (material == null || material.isAir()) {
-                lore.add(ItemDisplayUtil.legacy(text("menus.main.mission-lore.invalid-item-format",
+                lore.add(ItemDisplayUtil.legacy(modeText(mode, "main.mission-lore.invalid-item-format",
                         "&7• &f%amount%x %item%", Map.of(
                                 "amount", String.valueOf(configured.amount()),
                                 "item", ItemDisplayUtil.prettify(configured.material())
                         ))));
             } else {
-                lore.add(rewardItemLine("menus.main.mission-lore.vanilla-item-prefix", "&7• &f%amount%x ",
+                lore.add(rewardItemLine(mode, "main.mission-lore.vanilla-item-prefix", "&7• &f%amount%x ",
                         configured.amount(), new ItemStack(material)));
             }
         }
         for (RewardDefinition.MmoItemReward configured : reward.mmoItems()) {
             ItemStack item = plugin.getMmoItemsHook().build(configured.type(), configured.id(), 1);
             lore.add(item == null
-                    ? ItemDisplayUtil.legacy(text("menus.main.mission-lore.invalid-mmoitem-format",
+                    ? ItemDisplayUtil.legacy(modeText(mode, "main.mission-lore.invalid-mmoitem-format",
                             "&7• &d%amount%x %item%", Map.of(
                                     "amount", String.valueOf(configured.amount()),
                                     "item", ItemDisplayUtil.prettify(configured.id())
                             )))
-                    : rewardItemLine("menus.main.mission-lore.mmoitem-prefix", "&7• &d%amount%x ", configured.amount(), item));
+                    : rewardItemLine(mode, "main.mission-lore.mmoitem-prefix", "&7• &d%amount%x ", configured.amount(), item));
         }
         for (RewardDefinition.MythicItemReward configured : reward.mythicItems()) {
             ItemStack item = plugin.getMythicItemsHook().build(configured.id(), 1);
             lore.add(item == null
-                    ? ItemDisplayUtil.legacy(text("menus.main.mission-lore.invalid-mythic-item-format",
+                    ? ItemDisplayUtil.legacy(modeText(mode, "main.mission-lore.invalid-mythic-item-format",
                             "&7• &5%amount%x %item%", Map.of(
                                     "amount", String.valueOf(configured.amount()),
                                     "item", ItemDisplayUtil.prettify(configured.id())
                             )))
-                    : rewardItemLine("menus.main.mission-lore.mythic-item-prefix", "&7• &5%amount%x ", configured.amount(), item));
+                    : rewardItemLine(mode, "main.mission-lore.mythic-item-prefix", "&7• &5%amount%x ", configured.amount(), item));
         }
         for (RewardDefinition.ExactItemReward configured : reward.exactItems()) {
-            lore.add(rewardItemLine("menus.main.mission-lore.exact-item-prefix", "&7• &f%amount%x ",
+            lore.add(rewardItemLine(mode, "main.mission-lore.exact-item-prefix", "&7• &f%amount%x ",
                     configured.amount(), configured.item()));
         }
         if (reward.empty() && reward.displayLore().isEmpty()) {
-            lore.add(ItemDisplayUtil.legacy(text("menus.main.mission-lore.no-reward",
+            lore.add(ItemDisplayUtil.legacy(modeText(mode, "main.mission-lore.no-reward",
                     "&7• Sin recompensa configurada", Map.of())));
         }
     }
 
-    private Component rewardItemLine(String path, String fallback, int amount, ItemStack item) {
-        String prefix = text(path, fallback, Map.of("amount", String.valueOf(Math.max(1, amount))));
+    private Component rewardItemLine(MenuMode mode, String path, String fallback, int amount, ItemStack item) {
+        String prefix = modeText(mode, path, fallback, Map.of("amount", String.valueOf(Math.max(1, amount))));
         return ItemDisplayUtil.legacy(prefix)
                 .append(ItemDisplayUtil.effectiveName(item))
                 .decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false);
@@ -517,17 +567,17 @@ public final class QuestMenuManager implements Listener {
         return DurationGroup.ONE_DAY;
     }
 
-    private ItemStack pageArrow(boolean next, String action, String instanceId, int destination,
+    private ItemStack pageArrow(MenuMode mode, boolean next, String action, String instanceId, int destination,
                                 int currentPage, int totalPages, DurationGroup group) {
-        String base = next ? "menus.page-buttons.next" : "menus.page-buttons.previous";
+        String base = next ? "page-buttons.next" : "page-buttons.previous";
         Map<String, String> values = Map.of(
                 "page", String.valueOf(currentPage),
                 "pages", String.valueOf(totalPages),
                 "destination", String.valueOf(destination)
         );
-        Material material = material(base + ".material", Material.ARROW);
-        String name = text(base + ".name", next ? "&aPágina siguiente" : "&ePágina anterior", values);
-        List<String> lore = lore(base + ".lore", List.of("&7Página actual: &f%page%/%pages%"), values);
+        Material material = modeMaterial(mode, base + ".material", Material.ARROW);
+        String name = modeText(mode, base + ".name", next ? "&aPágina siguiente" : "&ePágina anterior", values);
+        List<String> lore = modeLore(mode, base + ".lore", List.of("&7Página actual: &f%page%/%pages%"), values);
         return actionItem(material, name, lore, action, instanceId, null, destination, group);
     }
 
@@ -573,8 +623,11 @@ public final class QuestMenuManager implements Listener {
         if (!(clicker instanceof Player player)) return;
         MenuSession session = sessions.get(player.getUniqueId());
         if (session == null || !event.getView().getTopInventory().equals(session.inventory())) return;
-        if (event.getRawSlot() < 0 || event.getRawSlot() >= session.inventory().getSize()) return;
+        // El menú público nunca acepta objetos del inventario del jugador. Cancelar
+        // toda la vista impide shift-click, doble click y teclas numéricas capaces
+        // de insertar o recolectar iconos desde el inventario superior.
         event.setCancelled(true);
+        if (event.getRawSlot() < 0 || event.getRawSlot() >= session.inventory().getSize()) return;
         ItemStack item = event.getCurrentItem();
         if (item == null || !item.hasItemMeta()) return;
         PersistentDataContainer pdc = item.getItemMeta().getPersistentDataContainer();
@@ -585,15 +638,19 @@ public final class QuestMenuManager implements Listener {
         Integer page = pdc.get(pageKey, PersistentDataType.INTEGER);
         DurationGroup group = parseGroup(pdc.get(groupKey, PersistentDataType.STRING), session.group());
 
+        if (session.mode() == MenuMode.VIEW_ONLY
+                && (action.equals("DETAIL") || action.equals("CLAIM") || action.equals("DELIVER")
+                || action.equals("REWARD_PAGE"))) return;
+
         switch (action) {
-            case "BACK" -> openMain(player, group, session.mainPage());
+            case "BACK" -> openMain(player, session.mode(), group, session.mainPage());
             case "SOCIAL_BACK" -> {
-                String command = plugin.getConfig().getString("menus.back-command", "social");
+                String command = modeString(session.mode(), "back-command", "social");
                 player.closeInventory();
                 if (command != null && !command.isBlank()) player.performCommand(command.startsWith("/") ? command.substring(1) : command);
             }
-            case "GROUP" -> openMain(player, group, 1);
-            case "MAIN_PAGE" -> openMain(player, group, page == null ? 1 : page);
+            case "GROUP" -> openMain(player, session.mode(), group, 1);
+            case "MAIN_PAGE" -> openMain(player, session.mode(), group, page == null ? 1 : page);
             case "DETAIL" -> openDetail(player, rotations.instance(instanceId), 1, session.mainPage());
             case "CLAIM" -> rewards.claim(player, rotations.instance(instanceId));
             case "REWARD_PAGE" -> openDetail(player, rotations.instance(instanceId), page == null ? 1 : page, session.mainPage());
@@ -630,29 +687,66 @@ public final class QuestMenuManager implements Listener {
         catch (IllegalArgumentException ignored) { return fallback == null ? DurationGroup.ONE_DAY : fallback; }
     }
 
-    private Material material(String path, Material fallback) {
-        String raw = plugin.getConfig().getString(path, fallback.name());
+    private String modePath(MenuMode mode, String relative) {
+        return "menus." + mode.configKey() + "." + relative;
+    }
+
+    private String legacyPath(String relative) {
+        return "menus." + relative;
+    }
+
+    private String modeString(MenuMode mode, String relative, String fallback) {
+        String primary = modePath(mode, relative);
+        if (plugin.getConfig().isSet(primary)) {
+            String value = plugin.getConfig().getString(primary);
+            return value == null ? fallback : value;
+        }
+        String legacy = legacyPath(relative);
+        String value = plugin.getConfig().getString(legacy, fallback);
+        return value == null ? fallback : value;
+    }
+
+    private int modeInt(MenuMode mode, String relative, int fallback) {
+        String primary = modePath(mode, relative);
+        if (plugin.getConfig().isSet(primary)) return plugin.getConfig().getInt(primary, fallback);
+        return plugin.getConfig().getInt(legacyPath(relative), fallback);
+    }
+
+    private boolean modeBoolean(MenuMode mode, String relative, boolean fallback) {
+        String primary = modePath(mode, relative);
+        if (plugin.getConfig().isSet(primary)) return plugin.getConfig().getBoolean(primary, fallback);
+        return plugin.getConfig().getBoolean(legacyPath(relative), fallback);
+    }
+
+    private Material modeMaterial(MenuMode mode, String relative, Material fallback) {
+        String raw = modeString(mode, relative, fallback.name());
         Material material = Material.matchMaterial(raw == null ? "" : raw);
         return material == null || material.isAir() ? fallback : material;
     }
 
-    private int[] slots(String path, int[] fallback) {
-        List<Integer> configured = plugin.getConfig().getIntegerList(path);
+    private int[] modeSlots(MenuMode mode, String relative, int[] fallback) {
+        String primary = modePath(mode, relative);
+        List<Integer> configured = plugin.getConfig().isSet(primary)
+                ? plugin.getConfig().getIntegerList(primary)
+                : plugin.getConfig().getIntegerList(legacyPath(relative));
         if (configured == null || configured.isEmpty()) return fallback.clone();
         return configured.stream().mapToInt(Integer::intValue).toArray();
     }
 
-    private String text(String path, String fallback, Map<String, String> replacements) {
-        String value = plugin.getConfig().getString(path, fallback);
-        if (value == null) value = fallback;
+    private String modeText(MenuMode mode, String relative, String fallback, Map<String, String> replacements) {
+        String value = modeString(mode, relative, fallback);
         for (Map.Entry<String, String> entry : replacements.entrySet()) {
             value = value.replace("%" + entry.getKey() + "%", entry.getValue());
         }
         return value;
     }
 
-    private List<String> lore(String path, List<String> fallback, Map<String, String> replacements) {
-        List<String> values = plugin.getConfig().getStringList(path);
+    private List<String> modeLore(MenuMode mode, String relative, List<String> fallback,
+                                  Map<String, String> replacements) {
+        String primary = modePath(mode, relative);
+        List<String> values = plugin.getConfig().isSet(primary)
+                ? plugin.getConfig().getStringList(primary)
+                : plugin.getConfig().getStringList(legacyPath(relative));
         if (values == null || values.isEmpty()) values = fallback;
         List<String> result = new ArrayList<>(values.size());
         for (String raw : values) {
@@ -665,8 +759,8 @@ public final class QuestMenuManager implements Listener {
         return result;
     }
 
-    private int menuSize(String path, int fallback) {
-        int size = plugin.getConfig().getInt(path, fallback);
+    private int modeMenuSize(MenuMode mode, String relative, int fallback) {
+        int size = modeInt(mode, relative, fallback);
         if (size < 9) return fallback;
         size = Math.min(54, size);
         return size - (size % 9);
@@ -676,7 +770,16 @@ public final class QuestMenuManager implements Listener {
         return slot >= 0 && slot < size;
     }
 
+    private enum MenuMode {
+        VIEW_ONLY("viewer"),
+        INTERACTIVE("interactive");
+
+        private final String configKey;
+        MenuMode(String configKey) { this.configKey = configKey; }
+        String configKey() { return configKey; }
+    }
+
     private enum MenuType { MAIN, DETAIL }
-    private record MenuSession(Inventory inventory, MenuType type, int mainPage, DurationGroup group,
-                               String instanceId, int rewardPage) { }
+    private record MenuSession(Inventory inventory, MenuType type, MenuMode mode, int mainPage,
+                               DurationGroup group, String instanceId, int rewardPage) { }
 }

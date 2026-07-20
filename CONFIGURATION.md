@@ -1,4 +1,4 @@
-# Configuración de MDVQuest 1.2.4
+# Configuración de MDVQuest 1.3.0
 
 Las misiones se leen desde todos los archivos `.yml` ubicados en:
 
@@ -7,6 +7,41 @@ plugins/MDVQuest/missions/
 ```
 
 El editor visual escribe en esa misma carpeta y permite elegir el archivo de destino.
+
+## Menús público e interactivo
+
+`menus.viewer` controla el menú abierto por `/quest`, sus aliases y MDVSocial. Sus misiones son de solo lectura: aunque se personalice el lore, el manejador de clics no permite abrir detalles, entregar ni reclamar.
+
+`menus.interactive` controla el menú que abre el encargado mediante `/mdvquest npc [jugador]`. Mantiene el flujo completo anterior y su detalle se configura en `menus.interactive.detail`.
+
+Las dos variantes admiten de forma independiente:
+
+- `title`, `size` y `fill`.
+- `category-slots`, `separator-slots` y `mission-slots`.
+- Slots y apariencia de paginación y regreso.
+- Materiales de estados, textos de acceso, categorías y lore de misiones.
+
+Al actualizar desde 1.2.x, las antiguas secciones `menus.main`, `menus.detail`, `menus.page-buttons` y `menus.back-command` se copian automáticamente a las nuevas rutas.
+
+## Filtro administrativo por YAML
+
+El botón `editor.admin-catalog.file-filter` aparece por defecto en el slot 46. General/todos los YAML es siempre la primera opción.
+
+- Clic izquierdo: siguiente archivo.
+- Clic derecho: archivo anterior.
+- Shift-click: volver a General.
+
+El filtro se combina con la duración seleccionada y se conserva al cambiar de página, visualizar, editar o cancelar.
+
+## Apertura desde Citizens
+
+Configura el comando del NPC para ejecutarse desde consola y abrir:
+
+```text
+mdvquest npc <jugador>
+```
+
+La forma exacta del placeholder del nombre depende del sistema de comandos usado con Citizens. El comando requiere un jugador conectado y abre directamente su menú interactivo personal. Para probarlo como administrador dentro del juego puedes usar `/mdvquest npc` o `/mdvquest npc Nombre`.
 
 ## Ejemplo completo
 
@@ -75,7 +110,7 @@ missions:
 - `objectives`: uno o varios objetivos. Todos deben completarse.
 - `rewards`: recompensas manualmente reclamables.
 
-El editor limita a 7 objetivos por misión por defecto, correspondientes a los slots 10–16. Se cambia con `editor.max-objectives-per-mission`, pero nunca supera la cantidad configurada en `menus.detail.objective-slots`.
+El editor limita a 7 objetivos por misión por defecto, correspondientes a los slots 10–16. Se cambia con `editor.max-objectives-per-mission`, pero nunca supera la cantidad configurada en `menus.interactive.detail.objective-slots`.
 
 ## Objetivos
 
