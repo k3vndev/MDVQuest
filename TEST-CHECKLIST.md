@@ -169,3 +169,11 @@ Prueba esta versión en una copia de Purpur 1.21.6 antes de producción.
 - [ ] Confirmar que desaparece del archivo anterior y aparece una sola vez en el nuevo.
 - [ ] Repetir con un ID que usa `-`.
 - [ ] Si existían copias históricas del mismo ID normalizado, guardar la misión debe dejar una sola copia.
+
+## 1.4.1 — expiración y ocupación de cupos
+
+- Aceptar un contrato, avanzar parcialmente y esperar/forzar el fin de su rotación: desaparece de `/quest`, se borra su progreso y deja de ocupar cupo.
+- Aceptar y completar un contrato, reclamarlo: continúa contando en `%accepted%/%limit%` hasta el próximo roll.
+- Intentar cancelar una misión ya reclamada: no libera cupo ni elimina la reclamación.
+- Ejecutar reroll de una rotación: se eliminan aceptación, progreso y claim del ciclo anterior antes de mostrar el nuevo catálogo.
+- Reiniciar con instancias ya vencidas en SQLite: se purgan durante el arranque y no reaparecen.

@@ -1,5 +1,5 @@
 # ==========================================================
-# MDVQuest 1.3.0 - Misiones globales + menús viewer/interactivo + editor visual
+# MDVQuest 1.4.1 - Misiones globales + menús viewer/interactivo + editor visual
 # Los dias son dias REALES, no dias de Minecraft.
 # ==========================================================
 
@@ -115,6 +115,18 @@ access-tiers:
     permission: "mdvquest.access.vip2"
     locked-material: YELLOW_STAINED_GLASS_PANE
 
+acceptance:
+  # Solo las misiones aceptadas progresan y aparecen en /quest.
+  # Al expirar su rotación se borran la aceptación, el progreso y la reclamación.
+  # Reclamar una recompensa NO libera el cupo: queda ocupado hasta el próximo roll.
+  permission-prefix: mdvquest.contract-limit
+  max-permission-checks: 100
+  default-limits:
+    one-day: 3
+    two-three-days: 2
+    four-six-days: 1
+    seven-days: 1
+
 menus:
   # Puede ser URL directa de textures.minecraft.net o Value Base64 de Minecraft-Heads.
   back-head-texture: ""
@@ -140,7 +152,7 @@ menus:
           - "&7Página actual: &f%page%/%pages%"
 
     main:
-      title: "&8Misiones"
+      title: "&8Misiones &7(%accepted%/%limit%)"
       size: 54
       fill: true
       category-slots: [9, 18, 27, 36]
@@ -198,6 +210,7 @@ menus:
           material: BOOK
           name: "&eMisiones diarias"
           lore:
+            - "&7Contratos aceptados: &f%accepted%/%limit%"
             - "&7Completadas: &f%completed%/%total%"
             - "&7Nuevas misiones en: &f%remaining%"
             - ""
@@ -206,6 +219,7 @@ menus:
           material: BOOK
           name: "&eMisiones de 2 a 3 días"
           lore:
+            - "&7Contratos aceptados: &f%accepted%/%limit%"
             - "&7Completadas: &f%completed%/%total%"
             - "&7Más misiones en: &f%remaining%"
             - ""
@@ -214,6 +228,7 @@ menus:
           material: BOOK
           name: "&eMisiones de 4 a 6 días"
           lore:
+            - "&7Contratos aceptados: &f%accepted%/%limit%"
             - "&7Completadas: &f%completed%/%total%"
             - "&7Más misiones en: &f%remaining%"
             - ""
@@ -222,6 +237,7 @@ menus:
           material: BOOK
           name: "&eMisiones semanales"
           lore:
+            - "&7Contratos aceptados: &f%accepted%/%limit%"
             - "&7Completadas: &f%completed%/%total%"
             - "&7Nuevas misiones en: &f%remaining%"
             - ""
@@ -248,7 +264,7 @@ menus:
           - "&7Página actual: &f%page%/%pages%"
 
     main:
-      title: "&8Misiones"
+      title: "&8Misiones &7(%accepted%/%limit%)"
       size: 54
       fill: true
       category-slots: [9, 18, 27, 36]
@@ -299,12 +315,18 @@ menus:
         completed: "&a&lClick para recibir la recompensa."
         delivery-pending: "&eClick para entregar con el encargado."
         details: "&eClick para ver más detalles."
+        contract-count: "&7Contratos activos: &f%accepted%/%limit%"
+        accepted-state: "&a✦ Contrato en curso"
+        available-state: "&eDisponible para aceptar"
+        accepted-controls: "&eClick izquierdo: ver detalles. &cShift + click derecho: cancelar."
+        available-controls: "&eClick izquierdo: ver detalles. &aClick derecho: aceptar contrato."
 
       categories:
         one-day:
           material: BOOK
           name: "&eMisiones diarias"
           lore:
+            - "&7Contratos aceptados: &f%accepted%/%limit%"
             - "&7Completadas: &f%completed%/%total%"
             - "&7Nuevas misiones en: &f%remaining%"
             - ""
@@ -313,6 +335,7 @@ menus:
           material: BOOK
           name: "&eMisiones de 2 a 3 días"
           lore:
+            - "&7Contratos aceptados: &f%accepted%/%limit%"
             - "&7Completadas: &f%completed%/%total%"
             - "&7Más misiones en: &f%remaining%"
             - ""
@@ -321,6 +344,7 @@ menus:
           material: BOOK
           name: "&eMisiones de 4 a 6 días"
           lore:
+            - "&7Contratos aceptados: &f%accepted%/%limit%"
             - "&7Completadas: &f%completed%/%total%"
             - "&7Más misiones en: &f%remaining%"
             - ""
@@ -329,6 +353,7 @@ menus:
           material: BOOK
           name: "&eMisiones semanales"
           lore:
+            - "&7Contratos aceptados: &f%accepted%/%limit%"
             - "&7Completadas: &f%completed%/%total%"
             - "&7Nuevas misiones en: &f%remaining%"
             - ""
@@ -452,6 +477,12 @@ anti-exploit:
     clan-id-placeholder: ""
 
 messages:
+  contract-accepted: '&aContrato aceptado: &f%mission% &7(&f%accepted%/%limit%&7).'
+  contract-already-accepted: '&eYa tienes en curso el contrato &f%mission%&e.'
+  contract-limit-reached: '&cAlcanzaste el límite de contratos de &f%category%&c: &f%accepted%/%limit%&c.'
+  contract-cancelled: '&eCancelaste el contrato &f%mission%&e. Todo su progreso fue reiniciado.'
+  contract-database-error: '&cNo se pudo guardar el cambio del contrato. Revisa la consola.'
+  contract-not-accepted: '&cPrimero debes aceptar el contrato &f%mission% &ccon el Maestro de los Contratos.'
   prefix: "&6&l[&5&lMDVCRAFT&6&l] &4» "
   no-permission: "&cNo tienes permiso."
   no-active-missions: "&7No hay misiones activas en este momento."
@@ -479,3 +510,4 @@ messages:
   force-mission-rotation-missing: "&cLa misión &f%mission% &cusa una rotación inexistente."
   force-mission-rotation-disabled: "&cLa rotación de &f%mission% &cestá deshabilitada en config.yml."
   force-mission-database-error: "&cNo se pudo guardar la misión forzada. Revisa la consola y SQLite."
+

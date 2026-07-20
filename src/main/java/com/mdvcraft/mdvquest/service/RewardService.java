@@ -64,6 +64,10 @@ public final class RewardService {
             plugin.getSocialHook().sound(player, "error");
             return false;
         }
+        if (!progress.accepted(player, instance)) {
+            plugin.message(player, "contract-not-accepted", Map.of("mission", instance.definition().name()));
+            return false;
+        }
         if (progress.claimed(player, instance)) {
             plugin.message(player, "already-claimed", Map.of());
             return false;
@@ -152,6 +156,8 @@ public final class RewardService {
             }
 
             progress.markClaimed(player, instance);
+            // No se elimina la aceptación: el contrato reclamado mantiene ocupado
+            // su cupo hasta el próximo roll de esa rotación.
             giveNonItemRewards(player, instance);
             plugin.message(player, "mission-claimed", Map.of("mission", instance.definition().name()));
             plugin.getSocialHook().sound(player, "confirm");

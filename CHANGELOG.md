@@ -1,3 +1,12 @@
+## 1.4.1
+
+- Los contratos expirados eliminan aceptación, progreso, reclamación y víctimas PvP únicas.
+- La limpieza de ciclos vencidos se ejecuta antes de generar el nuevo roll y también al iniciar el servidor.
+- Las misiones reclamadas siguen ocupando su cupo hasta que termina o se regenera la rotación.
+- Una misión reclamada no puede cancelarse para recuperar el cupo anticipadamente.
+- Las instancias vencidas se ocultan inmediatamente de menús, conteos y búsquedas internas.
+- Sin cambios de esquema SQLite ni edición manual de configuración.
+
 # Changelog
 
 ## 1.3.0

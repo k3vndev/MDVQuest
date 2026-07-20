@@ -89,6 +89,23 @@ public final class QuestDatabase implements AutoCloseable {
                     """);
             statement.executeUpdate("CREATE INDEX IF NOT EXISTS idx_claims_instance ON player_claims(instance_id)");
             statement.executeUpdate("""
+                    CREATE TABLE IF NOT EXISTS player_accepted_missions (
+                      player_uuid TEXT NOT NULL,
+                      instance_id TEXT NOT NULL,
+                      accepted_at INTEGER NOT NULL,
+                      PRIMARY KEY(player_uuid, instance_id)
+                    )
+                    """);
+            statement.executeUpdate("CREATE INDEX IF NOT EXISTS idx_accepted_instance ON player_accepted_missions(instance_id)");
+            // Migración 1.3.x -> 1.4.0: conserva como aceptados los contratos que ya tenían progreso.
+            statement.executeUpdate("""
+                    INSERT OR IGNORE INTO player_accepted_missions(player_uuid, instance_id, accepted_at)
+                    SELECT DISTINCT p.player_uuid, p.instance_id, CAST(strftime('%s','now') AS INTEGER) * 1000
+                    FROM player_progress p
+                    WHERE p.progress > 0
+                      AND NOT EXISTS (SELECT 1 FROM player_claims c WHERE c.player_uuid=p.player_uuid AND c.instance_id=p.instance_id)
+                    """);
+            statement.executeUpdate("""
                     CREATE TABLE IF NOT EXISTS pvp_unique_victims (
                       player_uuid TEXT NOT NULL,
                       instance_id TEXT NOT NULL,
@@ -213,6 +230,15 @@ public final class QuestDatabase implements AutoCloseable {
                 while (rs.next()) state.putLoadedProgress(new ObjectiveKey(rs.getString(1), rs.getString(2)), rs.getLong(3));
             }
         }
+        String acceptedSql = "SELECT instance_id FROM player_accepted_missions WHERE player_uuid = ? AND instance_id IN (" + placeholders + ")";
+        try (PreparedStatement statement = connection.prepareStatement(acceptedSql)) {
+            int index = 1;
+            statement.setString(index++, playerId.toString());
+            for (String id : activeInstanceIds) statement.setString(index++, id);
+            try (ResultSet rs = statement.executeQuery()) {
+                while (rs.next()) state.acceptedInstances().add(rs.getString(1));
+            }
+        }
         String claimsSql = "SELECT instance_id FROM player_claims WHERE player_uuid = ? AND instance_id IN (" + placeholders + ")";
         try (PreparedStatement statement = connection.prepareStatement(claimsSql)) {
             int index = 1;
@@ -266,6 +292,36 @@ public final class QuestDatabase implements AutoCloseable {
             statement.executeBatch();
             connection.commit();
             snapshots.forEach((state, dirty) -> state.dirty().removeAll(dirty));
+        } catch (SQLException ex) {
+            connection.rollback();
+            throw ex;
+        } finally {
+            connection.setAutoCommit(previous);
+        }
+    }
+
+    public synchronized boolean acceptMission(UUID playerId, String instanceId, long now) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement(
+                "INSERT OR IGNORE INTO player_accepted_missions(player_uuid, instance_id, accepted_at) VALUES(?,?,?)")) {
+            statement.setString(1, playerId.toString());
+            statement.setString(2, instanceId);
+            statement.setLong(3, now);
+            return statement.executeUpdate() == 1;
+        }
+    }
+
+    public synchronized void cancelMission(UUID playerId, String instanceId) throws SQLException {
+        boolean previous = connection.getAutoCommit();
+        connection.setAutoCommit(false);
+        try (PreparedStatement accepted = connection.prepareStatement("DELETE FROM player_accepted_missions WHERE player_uuid=? AND instance_id=?");
+             PreparedStatement progress = connection.prepareStatement("DELETE FROM player_progress WHERE player_uuid=? AND instance_id=?");
+             PreparedStatement victims = connection.prepareStatement("DELETE FROM pvp_unique_victims WHERE player_uuid=? AND instance_id=?")) {
+            for (PreparedStatement statement : java.util.List.of(accepted, progress, victims)) {
+                statement.setString(1, playerId.toString());
+                statement.setString(2, instanceId);
+                statement.executeUpdate();
+            }
+            connection.commit();
         } catch (SQLException ex) {
             connection.rollback();
             throw ex;
@@ -355,6 +411,10 @@ public final class QuestDatabase implements AutoCloseable {
         }
     }
 
+    /**
+     * Elimina de forma atómica un ciclo vencido y todos sus datos por jugador:
+     * progreso, reclamaciones, contratos aceptados y víctimas PvP únicas.
+     */
     public synchronized int cleanupExpired(long now) throws SQLException {
         long cooldownHours = Math.max(1L, plugin.getConfig().getLong("anti-exploit.pvp.victim-repeat-cooldown-hours", 24L));
         long cutoff = now - Math.max(24L, cooldownHours) * 3_600_000L;
@@ -372,7 +432,7 @@ public final class QuestDatabase implements AutoCloseable {
         boolean previous = connection.getAutoCommit();
         connection.setAutoCommit(false);
         try {
-            for (String table : List.of("player_progress", "player_claims", "pvp_unique_victims")) {
+            for (String table : List.of("player_progress", "player_claims", "player_accepted_missions", "pvp_unique_victims")) {
                 try (PreparedStatement statement = connection.prepareStatement("DELETE FROM " + table + " WHERE instance_id IN (" + placeholders + ")")) {
                     int i = 1; for (String id : ids) statement.setString(i++, id); statement.executeUpdate();
                 }
@@ -401,7 +461,7 @@ public final class QuestDatabase implements AutoCloseable {
         boolean previous = connection.getAutoCommit();
         connection.setAutoCommit(false);
         try {
-            for (String table : List.of("player_progress", "player_claims", "pvp_unique_victims")) {
+            for (String table : List.of("player_progress", "player_claims", "player_accepted_missions", "pvp_unique_victims")) {
                 try (PreparedStatement statement = connection.prepareStatement("DELETE FROM " + table + " WHERE instance_id IN (" + placeholders + ")")) {
                     int i = 1; for (String id : ids) statement.setString(i++, id); statement.executeUpdate();
                 }

@@ -26,6 +26,11 @@ public final class DeliveryService {
     }
 
     public long deliver(Player player, MissionInstance instance, ObjectiveDefinition objective) {
+        if (player == null || instance == null || objective == null) return 0;
+        if (!progress.accepted(player, instance)) {
+            plugin.message(player, "contract-not-accepted", Map.of("mission", instance.definition().name()));
+            return 0;
+        }
         if (objective.type() != ObjectiveType.DELIVER_MMOITEM && objective.type() != ObjectiveType.DELIVER_VANILLA_ITEM) return 0;
         long current = progress.progress(player, instance, objective);
         long remaining = Math.max(0L, objective.amount() - current);

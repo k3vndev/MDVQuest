@@ -132,6 +132,7 @@ public final class QuestMenuManager implements Listener {
 
         List<MissionInstance> filtered = all.stream()
                 .filter(instance -> group.accepts(plugin.getRegistry().durationDays(instance.definition())))
+                .filter(instance -> mode == MenuMode.INTERACTIVE || progress.accepted(player, instance))
                 .sorted(Comparator
                         .comparingInt((MissionInstance i) -> i.accessTier().level())
                         .thenComparingLong(MissionInstance::expiresAt)
@@ -142,7 +143,13 @@ public final class QuestMenuManager implements Listener {
         int page = Math.max(1, Math.min(pages, requestedPage));
         int size = modeMenuSize(mode, "main.size", 54);
         String legacyTitle = plugin.getConfig().getString("menus.title", "&8Misiones");
-        String title = modeText(mode, "main.title", legacyTitle, Map.of());
+        int selectedAccepted = progress.acceptedCount(player, group);
+        int selectedLimit = progress.contractLimit(player, group);
+        String title = modeText(mode, "main.title", legacyTitle, Map.of(
+                "accepted", String.valueOf(selectedAccepted),
+                "limit", String.valueOf(selectedLimit),
+                "category", group.display()
+        ));
         Inventory inventory = plugin.getSocialHook().createInventory(null, title, size,
                 modeBoolean(mode, "main.fill", true));
 
@@ -155,9 +162,11 @@ public final class QuestMenuManager implements Listener {
             List<MissionInstance> categoryMissions = all.stream()
                     .filter(instance -> option.accepts(plugin.getRegistry().durationDays(instance.definition())))
                     .toList();
-            long completed = categoryMissions.stream().filter(instance -> progress.isMissionComplete(player, instance)).count();
+            long completed = categoryMissions.stream().filter(instance -> progress.accepted(player, instance) && progress.isMissionComplete(player, instance)).count();
+            int accepted = progress.acceptedCount(player, option);
+            int limit = progress.contractLimit(player, option);
             long nextReset = nextResetAt(option, now);
-            inventory.setItem(slot, categoryItem(mode, option, option == group, completed, categoryMissions.size(), nextReset, now));
+            inventory.setItem(slot, categoryItem(mode, option, option == group, completed, categoryMissions.size(), accepted, limit, nextReset, now));
         }
 
         int[] separatorSlots = modeSlots(mode, "main.separator-slots", DEFAULT_SEPARATOR_SLOTS);
@@ -281,7 +290,7 @@ public final class QuestMenuManager implements Listener {
     }
 
     private ItemStack categoryItem(MenuMode mode, DurationGroup group, boolean selected, long completed, long total,
-                                   long nextReset, long now) {
+                                   int accepted, int limit, long nextReset, long now) {
         String base = "main.categories." + group.configKey();
         Material configured = modeMaterial(mode, base + ".material", group.material());
         String name = modeText(mode, base + ".name", "&e" + group.display(), Map.of());
@@ -289,9 +298,12 @@ public final class QuestMenuManager implements Listener {
         Map<String, String> values = Map.of(
                 "completed", String.valueOf(completed),
                 "total", String.valueOf(total),
+                "accepted", String.valueOf(accepted),
+                "limit", String.valueOf(limit),
                 "remaining", remaining
         );
         List<String> configuredLore = modeLore(mode, base + ".lore", List.of(
+                "&7Contratos aceptados: &f%accepted%/%limit%",
                 "&7Completadas: &f%completed%/%total%",
                 "&7Nuevas misiones en: &f%remaining%",
                 "",
@@ -322,6 +334,7 @@ public final class QuestMenuManager implements Listener {
     }
 
     private ItemStack missionItem(Player player, MissionInstance instance, long now, MenuMode mode) {
+        boolean acceptedMission = progress.accepted(player, instance);
         boolean complete = progress.isMissionComplete(player, instance);
         boolean claimed = progress.claimed(player, instance);
         boolean locked = !access.hasAccess(player, instance.accessTier());
@@ -379,6 +392,19 @@ public final class QuestMenuManager implements Listener {
                             "pool", instance.accessTier().key()
                     ))));
         }
+        if (mode == MenuMode.INTERACTIVE) {
+            DurationGroup contractGroup = groupFor(instance);
+            int acceptedCount = progress.acceptedCount(player, contractGroup);
+            int limit = progress.contractLimit(player, contractGroup);
+            lore.add(Component.empty());
+            lore.add(ItemDisplayUtil.legacy(modeText(mode, "main.mission-lore.contract-count",
+                    "&7Contratos activos: &f%accepted%/%limit%", Map.of(
+                            "accepted", String.valueOf(acceptedCount), "limit", String.valueOf(limit),
+                            "category", contractGroup.display()))));
+            lore.add(ItemDisplayUtil.legacy(modeText(mode, acceptedMission
+                            ? "main.mission-lore.accepted-state" : "main.mission-lore.available-state",
+                    acceptedMission ? "&a✦ Contrato en curso" : "&eDisponible para aceptar", Map.of())));
+        }
         lore.add(Component.empty());
         lore.add(ItemDisplayUtil.legacy(modeText(mode, "main.mission-lore.expiration",
                 "&7Expira en: &f%remaining%", Map.of("remaining", TimeUtil.remaining(instance.expiresAt(), now)))));
@@ -393,9 +419,14 @@ public final class QuestMenuManager implements Listener {
         } else if (mode == MenuMode.VIEW_ONLY && hasPendingDelivery(player, instance)) {
             finalLine = modeText(mode, "main.mission-lore.delivery-pending",
                     "&eEntrega los objetos con el encargado de misiones.", Map.of());
+        } else if (mode == MenuMode.INTERACTIVE && acceptedMission) {
+            finalLine = modeText(mode, "main.mission-lore.accepted-controls",
+                    "&eClick izquierdo: ver detalles. &cShift + click derecho: cancelar.", Map.of());
+        } else if (mode == MenuMode.INTERACTIVE) {
+            finalLine = modeText(mode, "main.mission-lore.available-controls",
+                    "&eClick izquierdo: ver detalles. &aClick derecho: aceptar contrato.", Map.of());
         } else {
-            finalLine = modeText(mode, "main.mission-lore.details",
-                    mode == MenuMode.VIEW_ONLY ? "" : "&eClick para ver más detalles.", Map.of());
+            finalLine = modeText(mode, "main.mission-lore.details", "", Map.of());
         }
         if (finalLine != null && !finalLine.isBlank()) {
             lore.add(Component.empty());
@@ -404,9 +435,18 @@ public final class QuestMenuManager implements Listener {
 
         String action = mode == MenuMode.VIEW_ONLY
                 ? "NONE"
-                : complete && !claimed && !locked ? "CLAIM" : "DETAIL";
-        return decorate(item, instance.definition().name(), lore,
+                : complete && !claimed && !locked ? "CLAIM" : "MISSION";
+        ItemStack decorated = decorate(item, instance.definition().name(), lore,
                 action, instance.id(), null, 1, groupFor(instance));
+        if (mode == MenuMode.INTERACTIVE && acceptedMission && !claimed) {
+            ItemMeta meta = decorated.getItemMeta();
+            if (meta != null) {
+                meta.addEnchant(Enchantment.UNBREAKING, 1, true);
+                meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+                decorated.setItemMeta(meta);
+            }
+        }
+        return decorated;
     }
 
     private boolean hasPendingDelivery(Player player, MissionInstance instance) {
@@ -639,7 +679,7 @@ public final class QuestMenuManager implements Listener {
         DurationGroup group = parseGroup(pdc.get(groupKey, PersistentDataType.STRING), session.group());
 
         if (session.mode() == MenuMode.VIEW_ONLY
-                && (action.equals("DETAIL") || action.equals("CLAIM") || action.equals("DELIVER")
+                && (action.equals("DETAIL") || action.equals("MISSION") || action.equals("CLAIM") || action.equals("DELIVER")
                 || action.equals("REWARD_PAGE"))) return;
 
         switch (action) {
@@ -652,6 +692,19 @@ public final class QuestMenuManager implements Listener {
             case "GROUP" -> openMain(player, session.mode(), group, 1);
             case "MAIN_PAGE" -> openMain(player, session.mode(), group, page == null ? 1 : page);
             case "DETAIL" -> openDetail(player, rotations.instance(instanceId), 1, session.mainPage());
+            case "MISSION" -> {
+                MissionInstance instance = rotations.instance(instanceId);
+                if (instance == null) return;
+                if (event.isShiftClick() && event.isRightClick() && progress.accepted(player, instance)) {
+                    progress.cancelMission(player, instance);
+                    openMain(player, MenuMode.INTERACTIVE, group, session.mainPage());
+                } else if (event.isRightClick() && !progress.accepted(player, instance)) {
+                    progress.acceptMission(player, instance);
+                    openMain(player, MenuMode.INTERACTIVE, group, session.mainPage());
+                } else if (event.isLeftClick()) {
+                    openDetail(player, instance, 1, session.mainPage());
+                }
+            }
             case "CLAIM" -> rewards.claim(player, rotations.instance(instanceId));
             case "REWARD_PAGE" -> openDetail(player, rotations.instance(instanceId), page == null ? 1 : page, session.mainPage());
             case "DELIVER" -> {

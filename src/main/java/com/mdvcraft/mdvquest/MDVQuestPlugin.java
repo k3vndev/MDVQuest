@@ -140,8 +140,11 @@ public final class MDVQuestPlugin extends JavaPlugin {
         rotationTask = Bukkit.getScheduler().runTaskTimer(this, () -> {
             long now = System.currentTimeMillis();
             try {
-                boolean changed = rotationService.refresh(now);
+                // La limpieza va antes del refresh: primero desaparecen aceptaciones,
+                // progreso, claims y víctimas del ciclo vencido; después se genera el
+                // nuevo roll. Así el cupo se libera únicamente por cambio de ciclo.
                 int cleaned = database.cleanupExpired(now);
+                boolean changed = rotationService.refresh(now);
                 if (changed || cleaned > 0) progressService.rebuildIndex();
                 if (cleaned > 0) database.incrementalVacuum();
             } catch (SQLException ex) {
@@ -268,7 +271,33 @@ public final class MDVQuestPlugin extends JavaPlugin {
         changed |= copyValueIfMissing("menus.back-command", "menus.viewer.back-command");
         changed |= copyValueIfMissing("menus.back-command", "menus.interactive.back-command");
         changed |= migrateLegacyCompletionMessage();
+        changed |= migrateContractMenuConfig();
         if (changed) saveConfig();
+    }
+
+
+    /** Añade los placeholders visuales de 1.4.0 sin reemplazar diseños personalizados. */
+    private boolean migrateContractMenuConfig() {
+        boolean changed = false;
+        for (String mode : java.util.List.of("viewer", "interactive")) {
+            String titlePath = "menus." + mode + ".main.title";
+            String title = getConfig().getString(titlePath, "");
+            if ("&8Misiones".equals(title)) {
+                getConfig().set(titlePath, "&8Misiones &7(%accepted%/%limit%)");
+                changed = true;
+            }
+            for (String category : java.util.List.of("one-day", "two-three-days", "four-six-days", "seven-days")) {
+                String lorePath = "menus." + mode + ".main.categories." + category + ".lore";
+                java.util.List<String> lore = new java.util.ArrayList<>(getConfig().getStringList(lorePath));
+                boolean present = lore.stream().anyMatch(line -> line.contains("%accepted%") || line.contains("%limit%"));
+                if (!present && !lore.isEmpty()) {
+                    lore.add(0, "&7Contratos aceptados: &f%accepted%/%limit%");
+                    getConfig().set(lorePath, lore);
+                    changed = true;
+                }
+            }
+        }
+        return changed;
     }
 
     private boolean migrateLegacyCompletionMessage() {

@@ -47,6 +47,13 @@ public final class RotationService {
         currentCycleByRotation.clear();
         emptyPools.clear();
         long now = System.currentTimeMillis();
+        // Purga primero toda la información del ciclo vencido. De esta forma una
+        // aceptación expirada, su progreso y una recompensa ya reclamada no pueden
+        // sobrevivir a un reinicio del servidor ni mezclarse con el siguiente roll.
+        int cleaned = database.cleanupExpired(now);
+        if (cleaned > 0) {
+            plugin.getLogger().info("Se purgaron " + cleaned + " instancia(s) expirada(s) antes de cargar las rotaciones.");
+        }
         for (QuestDatabase.StoredInstance stored : database.loadUnexpiredInstances(now)) {
             MissionDefinition definition = registry.mission(stored.definitionId());
             if (definition == null) {
@@ -263,15 +270,21 @@ public final class RotationService {
     }
 
     public synchronized List<MissionInstance> activeInstances() {
-        return List.copyOf(active.values());
+        long now = System.currentTimeMillis();
+        return active.values().stream().filter(instance -> instance.isActive(now)).toList();
     }
 
     public synchronized MissionInstance instance(String id) {
-        return active.get(id);
+        MissionInstance instance = active.get(id);
+        return instance != null && instance.isActive(System.currentTimeMillis()) ? instance : null;
     }
 
     public synchronized Set<String> activeInstanceIds() {
-        return Set.copyOf(active.keySet());
+        long now = System.currentTimeMillis();
+        return active.values().stream()
+                .filter(instance -> instance.isActive(now))
+                .map(MissionInstance::id)
+                .collect(java.util.stream.Collectors.toUnmodifiableSet());
     }
 
     public synchronized Collection<String> currentCycles() {

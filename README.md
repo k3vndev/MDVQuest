@@ -1,6 +1,20 @@
-# MDVQuest 1.3.0
+# MDVQuest 1.4.1
 
 MDVQuest crea misiones individuales con rotaciones globales: durante cada ciclo todos los jugadores reciben las mismas misiones, pero el progreso y la reclamación pertenecen a cada jugador.
+
+## Novedades de 1.4.1
+
+- El vencimiento borra toda la información del contrato: aceptación, progreso, reclamación y víctimas PvP únicas.
+- La limpieza ocurre antes de crear el nuevo roll y también durante el inicio del servidor.
+- Una recompensa reclamada continúa ocupando el cupo hasta terminar la rotación; no puede cancelarse para liberar ese espacio.
+- Las instancias vencidas dejan de aparecer inmediatamente en menús y conteos.
+
+## Novedades de 1.4.0
+
+- Contratos aceptables desde el menú interactivo del NPC.
+- Límites separados por duración y ampliables mediante permisos.
+- `/quest` muestra únicamente contratos aceptados y permanece en modo VIEW_ONLY.
+- Cancelar un contrato reinicia todo su progreso y libera su cupo.
 
 ## Novedades de 1.3.0
 
@@ -60,14 +74,14 @@ MDVQuest crea misiones individuales con rotaciones globales: durante cada ciclo 
 
 ## Flujo público
 
-- El jugador no acepta misiones manualmente.
-- Toda acción válida progresa automáticamente las misiones activas compatibles.
-- `/quest` y MDVSocial permiten consultar el progreso desde cualquier lugar, sin acciones de entrega o reclamación.
-- El NPC abre el menú interactivo con `/mdvquest npc <jugador>`.
+- El NPC abre el menú interactivo con `/mdvquest npc <jugador>` y muestra todas las ofertas vigentes.
+- Click derecho acepta un contrato; click izquierdo abre sus detalles.
+- Solo las misiones aceptadas reciben progreso y aparecen en `/quest` o MDVSocial.
+- Shift + click derecho cancela una misión aceptada que todavía no fue reclamada, borra su progreso y libera el cupo.
 - Al completar una misión, el visor indica que debe visitarse al encargado.
 - En el menú interactivo, MDVQuest verifica el espacio antes de entregar la recompensa.
-- Si la misión expira antes de reclamar, la recompensa se pierde.
-- Al reclamar, queda marcada con tinte gris hasta el final del ciclo.
+- Reclamar la recompensa no libera el cupo: el contrato permanece aceptado hasta el siguiente roll.
+- Al expirar o regenerarse la rotación se eliminan la aceptación, el progreso y la reclamación del ciclo anterior.
 
 ## Menús
 

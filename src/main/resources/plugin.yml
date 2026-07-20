@@ -1,5 +1,5 @@
 name: MDVQuest
-version: 1.3.0
+version: 1.4.1
 main: com.mdvcraft.mdvquest.MDVQuestPlugin
 api-version: '1.21'
 author: MDVCRAFT
@@ -47,4 +47,17 @@ permissions:
     default: false
   mdvquest.access.vip2:
     description: Permite reclamar recompensas de instancias VIP2.
+    default: false
+
+  mdvquest.contract-limit.one-day.3:
+    description: Ejemplo de límite de contratos diarios. Los valores se leen dinámicamente.
+    default: false
+  mdvquest.contract-limit.two-three-days.2:
+    description: Ejemplo de límite de contratos de 2 a 3 días.
+    default: false
+  mdvquest.contract-limit.four-six-days.1:
+    description: Ejemplo de límite de contratos de 4 a 6 días.
+    default: false
+  mdvquest.contract-limit.seven-days.1:
+    description: Ejemplo de límite de contratos semanales.
     default: false

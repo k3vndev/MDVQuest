@@ -10,6 +10,7 @@ public final class PlayerQuestState {
     private final UUID playerId;
     private final Map<ObjectiveKey, Long> progress = new HashMap<>();
     private final Set<String> claimedInstances = new HashSet<>();
+    private final Set<String> acceptedInstances = new HashSet<>();
     private final Set<ObjectiveKey> dirty = new HashSet<>();
 
     public PlayerQuestState(UUID playerId) {
@@ -19,10 +20,12 @@ public final class PlayerQuestState {
     public UUID playerId() { return playerId; }
     public Map<ObjectiveKey, Long> progress() { return progress; }
     public Set<String> claimedInstances() { return claimedInstances; }
+    public Set<String> acceptedInstances() { return acceptedInstances; }
     public Set<ObjectiveKey> dirty() { return dirty; }
 
     public long progress(ObjectiveKey key) { return progress.getOrDefault(key, 0L); }
     public boolean claimed(String instanceId) { return claimedInstances.contains(instanceId); }
+    public boolean accepted(String instanceId) { return acceptedInstances.contains(instanceId); }
 
     public void putLoadedProgress(ObjectiveKey key, long value) {
         if (value > 0) progress.put(key, value);

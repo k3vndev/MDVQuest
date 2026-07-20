@@ -57,6 +57,7 @@ public final class ProgressService {
         for (PlayerQuestState state : cache.values()) {
             state.progress().keySet().removeIf(key -> !activeIds.contains(key.instanceId()));
             state.claimedInstances().removeIf(id -> !activeIds.contains(id));
+            state.acceptedInstances().removeIf(id -> !activeIds.contains(id));
             state.dirty().removeIf(key -> !activeIds.contains(key.instanceId()));
         }
     }
@@ -102,7 +103,7 @@ public final class ProgressService {
         long now = System.currentTimeMillis();
 
         for (ObjectiveRef ref : refs) {
-            if (!ref.instance().isActive(now) || state.claimed(ref.instance().id())) continue;
+            if (!ref.instance().isActive(now) || state.claimed(ref.instance().id()) || !state.accepted(ref.instance().id())) continue;
             if (!matches(player, ref.objective(), target, data)) continue;
             long increment = calculateIncrement(ref.objective(), amount, data);
             if (increment <= 0) continue;
@@ -112,7 +113,7 @@ public final class ProgressService {
     }
 
     public boolean incrementSpecific(Player player, MissionInstance instance, ObjectiveDefinition objective, long amount) {
-        if (player == null || instance == null || objective == null || amount <= 0 || !instance.isActive(System.currentTimeMillis())) return false;
+        if (player == null || instance == null || objective == null || amount <= 0 || !instance.isActive(System.currentTimeMillis()) || !state(player).accepted(instance.id())) return false;
         return increment(player, state(player), new ObjectiveRef(instance, objective), amount, true);
     }
 
@@ -299,7 +300,7 @@ public final class ProgressService {
         PlayerQuestState state = state(killer);
         int changed = 0;
         for (ObjectiveRef ref : refs) {
-            if (!ref.instance().isActive(now) || state.claimed(ref.instance().id())) continue;
+            if (!ref.instance().isActive(now) || state.claimed(ref.instance().id()) || !state.accepted(ref.instance().id())) continue;
             if (!matches(killer, ref.objective(), victim.getUniqueId().toString(), Collections.emptyMap())) continue;
             if (state.progress(key(ref)) >= ref.objective().amount()) continue;
             boolean unique = ref.objective().bool("unique-victims", plugin.getConfig().getBoolean("anti-exploit.pvp.unique-victims-default", true));
@@ -318,6 +319,98 @@ public final class ProgressService {
             catch (SQLException ex) { plugin.getLogger().warning("No se pudo guardar historial PvP: " + ex.getMessage()); }
         }
         return changed;
+    }
+
+    public boolean accepted(Player player, MissionInstance instance) {
+        return player != null && instance != null
+                && instance.isActive(System.currentTimeMillis())
+                && state(player).accepted(instance.id());
+    }
+
+    /**
+     * Cantidad de cupos ocupados en una categoría durante el ciclo actual.
+     *
+     * Una misión reclamada sigue contando porque continúa siendo un contrato
+     * aceptado hasta que expire o se regenere su rotación. Esto impide reclamar
+     * una misión y usar inmediatamente el mismo cupo para aceptar otra oferta.
+     */
+    public int acceptedCount(Player player, com.mdvcraft.mdvquest.gui.DurationGroup group) {
+        if (player == null || group == null) return 0;
+        PlayerQuestState state = state(player);
+        int count = 0;
+        long now = System.currentTimeMillis();
+        for (MissionInstance instance : rotations.activeInstances()) {
+            if (!instance.isActive(now)) continue;
+            if (state.accepted(instance.id()) && group.accepts(registry.durationDays(instance.definition()))) count++;
+        }
+        return count;
+    }
+
+    public int contractLimit(Player player, com.mdvcraft.mdvquest.gui.DurationGroup group) {
+        String key = group.configKey();
+        int limit = Math.max(0, plugin.getConfig().getInt("acceptance.default-limits." + key, switch (group) {
+            case ONE_DAY -> 3; case TWO_THREE -> 2; case FOUR_SIX, SEVEN_DAYS -> 1;
+        }));
+        int checks = Math.max(1, plugin.getConfig().getInt("acceptance.max-permission-checks", 100));
+        String prefix = plugin.getConfig().getString("acceptance.permission-prefix", "mdvquest.contract-limit");
+        for (int value = 0; value <= checks; value++) {
+            if (player.hasPermission(prefix + "." + key + "." + value)) limit = Math.max(limit, value);
+        }
+        return limit;
+    }
+
+    public boolean acceptMission(Player player, MissionInstance instance) {
+        if (player == null || instance == null || !instance.isActive(System.currentTimeMillis())) {
+            plugin.message(player, "mission-expired", Map.of());
+            return false;
+        }
+        PlayerQuestState state = state(player);
+        if (state.accepted(instance.id())) {
+            plugin.message(player, "contract-already-accepted", Map.of("mission", instance.definition().name()));
+            return false;
+        }
+        com.mdvcraft.mdvquest.gui.DurationGroup group = groupFor(instance);
+        int current = acceptedCount(player, group), limit = contractLimit(player, group);
+        if (current >= limit) {
+            plugin.message(player, "contract-limit-reached", Map.of("accepted", String.valueOf(current), "limit", String.valueOf(limit), "category", group.display()));
+            return false;
+        }
+        try {
+            if (!database.acceptMission(player.getUniqueId(), instance.id(), System.currentTimeMillis())) return false;
+            state.acceptedInstances().add(instance.id());
+            plugin.message(player, "contract-accepted", Map.of("mission", instance.definition().name(), "accepted", String.valueOf(current + 1), "limit", String.valueOf(limit)));
+            plugin.getSocialHook().sound(player, "confirm");
+            return true;
+        } catch (SQLException ex) {
+            plugin.getLogger().severe("No se pudo aceptar contrato: " + ex.getMessage());
+            plugin.message(player, "contract-database-error", Map.of());
+            return false;
+        }
+    }
+
+    public boolean cancelMission(Player player, MissionInstance instance) {
+        if (player == null || instance == null) return false;
+        PlayerQuestState state = state(player);
+        if (!state.accepted(instance.id()) || state.claimed(instance.id())) return false;
+        try {
+            database.cancelMission(player.getUniqueId(), instance.id());
+            state.acceptedInstances().remove(instance.id());
+            state.progress().keySet().removeIf(key -> key.instanceId().equals(instance.id()));
+            state.dirty().removeIf(key -> key.instanceId().equals(instance.id()));
+            plugin.message(player, "contract-cancelled", Map.of("mission", instance.definition().name()));
+            plugin.getSocialHook().sound(player, "back");
+            return true;
+        } catch (SQLException ex) {
+            plugin.getLogger().severe("No se pudo cancelar contrato: " + ex.getMessage());
+            plugin.message(player, "contract-database-error", Map.of());
+            return false;
+        }
+    }
+
+    private com.mdvcraft.mdvquest.gui.DurationGroup groupFor(MissionInstance instance) {
+        int days = registry.durationDays(instance.definition());
+        for (com.mdvcraft.mdvquest.gui.DurationGroup group : com.mdvcraft.mdvquest.gui.DurationGroup.values()) if (group.accepts(days)) return group;
+        return com.mdvcraft.mdvquest.gui.DurationGroup.ONE_DAY;
     }
 
     public boolean isMissionComplete(Player player, MissionInstance instance) {
