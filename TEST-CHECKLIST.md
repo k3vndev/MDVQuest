@@ -177,3 +177,15 @@ Prueba esta versión en una copia de Purpur 1.21.6 antes de producción.
 - Intentar cancelar una misión ya reclamada: no libera cupo ni elimina la reclamación.
 - Ejecutar reroll de una rotación: se eliminan aceptación, progreso y claim del ciclo anterior antes de mostrar el nuevo catálogo.
 - Reiniciar con instancias ya vencidas en SQLite: se purgan durante el arranque y no reaparecen.
+
+## MDVQuest 1.4.2 — permisos VIP, entrega rápida y brillo
+
+- [ ] Sin `mdvquest.access.vip1`, un jugador puede ver una misión VIP pero el clic derecho no la acepta y muestra el requisito de rango.
+- [ ] Sin `mdvquest.access.vip2`, un jugador no puede aceptar una misión VIP 2.
+- [ ] Con `access-tiers.vip2-inherits-vip1: true`, el permiso VIP 2 también permite aceptar misiones VIP 1.
+- [ ] Una misión aceptada con al menos un objetivo `DELIVER_MMOITEM` o `DELIVER_VANILLA_ITEM` pendiente muestra `Click derecho: entregar objetos` en el menú interactivo del NPC.
+- [ ] El clic derecho entrega objetos a todos los objetivos de entrega pendientes de esa misión y actualiza sus progresos sin abrir detalles.
+- [ ] `Shift + clic derecho` conserva prioridad y cancela la misión; no entrega objetos.
+- [ ] Las misiones sin objetivos de entrega pendientes no muestran la acción rápida ni consumen objetos con clic derecho.
+- [ ] Los iconos de cofre personalizados de una misión aceptada muestran brillo encantado, igual que los demás materiales.
+- [ ] `Click izquierdo: ver detalles` y `Click derecho: aceptar contrato` aparecen en líneas separadas, también tras migrar una configuración 1.4.1 existente.

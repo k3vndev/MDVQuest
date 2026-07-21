@@ -1,3 +1,10 @@
+## 1.4.2
+- Las misiones VIP ya no pueden aceptarse sin su permiso de acceso; la validación se realiza también en el servicio y no solo visualmente.
+- En el menú interactivo del NPC, el click derecho sobre una misión aceptada entrega todos sus objetivos de entrega pendientes sin abrir detalles.
+- La instrucción de entrega aparece únicamente en contratos aceptados con al menos un objetivo de entrega pendiente.
+- El brillo de contrato en curso fuerza `enchantment_glint_override`, corrigiendo iconos personalizados como cofres que anulaban el encantamiento visual.
+- Las instrucciones para ver detalles, aceptar y cancelar se muestran en líneas separadas; los `config.yml` antiguos con una sola línea siguen siendo compatibles.
+
 ## 1.4.1
 
 - Los contratos expirados eliminan aceptación, progreso, reclamación y víctimas PvP únicas.

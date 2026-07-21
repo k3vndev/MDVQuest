@@ -272,7 +272,54 @@ public final class MDVQuestPlugin extends JavaPlugin {
         changed |= copyValueIfMissing("menus.back-command", "menus.interactive.back-command");
         changed |= migrateLegacyCompletionMessage();
         changed |= migrateContractMenuConfig();
+        changed |= migrateQuest142Config();
         if (changed) saveConfig();
+    }
+
+    /**
+     * Migra únicamente los textos predeterminados anteriores a 1.4.2. Las
+     * personalizaciones del servidor se conservan intactas.
+     */
+    private boolean migrateQuest142Config() {
+        boolean changed = false;
+        String oldLocked = "&b● Necesitas el rango &f%rank% &bpara reclamar la recompensa de esta misión.";
+        String newLocked = "&b● Necesitas el rango &f%rank% &bpara aceptar y reclamar esta misión.";
+        for (String mode : java.util.List.of("viewer", "interactive")) {
+            String path = "menus." + mode + ".main.access.locked-line";
+            if (oldLocked.equals(getConfig().getString(path))) {
+                getConfig().set(path, newLocked);
+                changed = true;
+            }
+        }
+
+        String rankPath = "messages.mission-rank-required";
+        String oldRankMessage = "&cNecesitas el rango &f%rank% &cpara reclamar esta recompensa.";
+        if (oldRankMessage.equals(getConfig().getString(rankPath))) {
+            getConfig().set(rankPath,
+                    "&cNecesitas el rango &f%rank% &cpara aceptar o reclamar esta misión.");
+            changed = true;
+        }
+
+        String acceptedPath = "menus.interactive.main.mission-lore.accepted-controls";
+        String oldAccepted = "&eClick izquierdo: ver detalles. &cShift + click derecho: cancelar.";
+        if (oldAccepted.equals(getConfig().getString(acceptedPath))) {
+            getConfig().set(acceptedPath, java.util.List.of(
+                    "&eClick izquierdo: ver detalles.",
+                    "&cShift + click derecho: cancelar."
+            ));
+            changed = true;
+        }
+
+        String availablePath = "menus.interactive.main.mission-lore.available-controls";
+        String oldAvailable = "&eClick izquierdo: ver detalles. &aClick derecho: aceptar contrato.";
+        if (oldAvailable.equals(getConfig().getString(availablePath))) {
+            getConfig().set(availablePath, java.util.List.of(
+                    "&eClick izquierdo: ver detalles.",
+                    "&aClick derecho: aceptar contrato."
+            ));
+            changed = true;
+        }
+        return changed;
     }
 
 

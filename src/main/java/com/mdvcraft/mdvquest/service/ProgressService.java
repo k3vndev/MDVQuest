@@ -364,6 +364,12 @@ public final class ProgressService {
             plugin.message(player, "mission-expired", Map.of());
             return false;
         }
+        if (!plugin.getAccessService().hasAccess(player, instance.accessTier())) {
+            plugin.message(player, "mission-rank-required", Map.of(
+                    "rank", plugin.getAccessService().displayName(instance.accessTier())
+            ));
+            return false;
+        }
         PlayerQuestState state = state(player);
         if (state.accepted(instance.id())) {
             plugin.message(player, "contract-already-accepted", Map.of("mission", instance.definition().name()));

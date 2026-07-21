@@ -10,7 +10,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
@@ -26,6 +25,40 @@ public final class DeliveryService {
     }
 
     public long deliver(Player player, MissionInstance instance, ObjectiveDefinition objective) {
+        return deliver(player, instance, objective, true, true);
+    }
+
+    /**
+     * Entrega de una sola vez todos los objetivos pendientes de entrega de una
+     * misión. Se usa desde el click derecho del catálogo del NPC para evitar que
+     * el jugador tenga que entrar objetivo por objetivo al menú de detalles.
+     */
+    public long deliverAll(Player player, MissionInstance instance) {
+        if (player == null || instance == null) return 0;
+        if (!progress.accepted(player, instance)) {
+            plugin.message(player, "contract-not-accepted", Map.of("mission", instance.definition().name()));
+            return 0;
+        }
+
+        long delivered = 0;
+        boolean pendingDelivery = false;
+        for (ObjectiveDefinition objective : instance.definition().objectives()) {
+            if (!objective.type().isDelivery()) continue;
+            if (progress.progress(player, instance, objective) >= objective.amount()) continue;
+            pendingDelivery = true;
+            delivered += deliver(player, instance, objective, false, false);
+        }
+
+        if (!pendingDelivery || delivered <= 0) {
+            plugin.message(player, "delivery-none", Map.of());
+            return 0;
+        }
+        plugin.getSocialHook().sound(player, "confirm");
+        return delivered;
+    }
+
+    private long deliver(Player player, MissionInstance instance, ObjectiveDefinition objective,
+                         boolean notifyWhenEmpty, boolean playSound) {
         if (player == null || instance == null || objective == null) return 0;
         if (!progress.accepted(player, instance)) {
             plugin.message(player, "contract-not-accepted", Map.of("mission", instance.definition().name()));
@@ -54,7 +87,7 @@ public final class DeliveryService {
         }
 
         if (delivered <= 0) {
-            plugin.message(player, "delivery-none", Map.of());
+            if (notifyWhenEmpty) plugin.message(player, "delivery-none", Map.of());
             return 0;
         }
         inventory.setStorageContents(contents);
@@ -66,7 +99,7 @@ public final class DeliveryService {
                 "progress", String.valueOf(updated),
                 "required", String.valueOf(objective.amount())
         ));
-        plugin.getSocialHook().sound(player, "confirm");
+        if (playSound) plugin.getSocialHook().sound(player, "confirm");
         return delivered;
     }
 

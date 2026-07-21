@@ -1,6 +1,14 @@
-# MDVQuest 1.4.1
+# MDVQuest 1.4.2
 
 MDVQuest crea misiones individuales con rotaciones globales: durante cada ciclo todos los jugadores reciben las mismas misiones, pero el progreso y la reclamación pertenecen a cada jugador.
+
+## Novedades de 1.4.2
+
+- Las misiones VIP requieren su permiso también para ser aceptadas.
+- En el menú interactivo del NPC, el click derecho sobre un contrato aceptado entrega todos sus objetivos de entrega pendientes.
+- La opción de entrega rápida solo aparece cuando la misión realmente tiene entregas pendientes.
+- Los cofres y otros iconos personalizados muestran correctamente el brillo de contrato en curso.
+- Las acciones de ver detalles, aceptar y cancelar aparecen en líneas separadas.
 
 ## Novedades de 1.4.1
 

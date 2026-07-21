@@ -401,36 +401,58 @@ public final class QuestMenuManager implements Listener {
                     "&7Contratos activos: &f%accepted%/%limit%", Map.of(
                             "accepted", String.valueOf(acceptedCount), "limit", String.valueOf(limit),
                             "category", contractGroup.display()))));
-            lore.add(ItemDisplayUtil.legacy(modeText(mode, acceptedMission
-                            ? "main.mission-lore.accepted-state" : "main.mission-lore.available-state",
-                    acceptedMission ? "&a✦ Contrato en curso" : "&eDisponible para aceptar", Map.of())));
+            String statePath = acceptedMission
+                    ? "main.mission-lore.accepted-state"
+                    : locked ? "main.mission-lore.locked-state" : "main.mission-lore.available-state";
+            String stateFallback = acceptedMission
+                    ? "&a✦ Contrato en curso"
+                    : locked ? "&cNo disponible para aceptar" : "&eDisponible para aceptar";
+            lore.add(ItemDisplayUtil.legacy(modeText(mode, statePath, stateFallback, Map.of())));
         }
         lore.add(Component.empty());
         lore.add(ItemDisplayUtil.legacy(modeText(mode, "main.mission-lore.expiration",
                 "&7Expira en: &f%remaining%", Map.of("remaining", TimeUtil.remaining(instance.expiresAt(), now)))));
-        String finalLine;
+        List<String> finalLines = new ArrayList<>();
         if (claimed) {
-            finalLine = modeText(mode, "main.mission-lore.claimed", "&7Recompensa ya reclamada.", Map.of());
+            finalLines.add(modeText(mode, "main.mission-lore.claimed", "&7Recompensa ya reclamada.", Map.of()));
         } else if (complete && !locked) {
-            finalLine = modeText(mode, "main.mission-lore.completed",
+            finalLines.add(modeText(mode, "main.mission-lore.completed",
                     mode == MenuMode.VIEW_ONLY
                             ? "&aMisión completada. &7Visita al encargado para reclamarla."
-                            : "&a&lClick para recibir la recompensa.", Map.of());
+                            : "&a&lClick para recibir la recompensa.", Map.of()));
         } else if (mode == MenuMode.VIEW_ONLY && hasPendingDelivery(player, instance)) {
-            finalLine = modeText(mode, "main.mission-lore.delivery-pending",
-                    "&eEntrega los objetos con el encargado de misiones.", Map.of());
-        } else if (mode == MenuMode.INTERACTIVE && acceptedMission) {
-            finalLine = modeText(mode, "main.mission-lore.accepted-controls",
-                    "&eClick izquierdo: ver detalles. &cShift + click derecho: cancelar.", Map.of());
+            finalLines.add(modeText(mode, "main.mission-lore.delivery-pending",
+                    "&eEntrega los objetos con el encargado de misiones.", Map.of()));
         } else if (mode == MenuMode.INTERACTIVE) {
-            finalLine = modeText(mode, "main.mission-lore.available-controls",
-                    "&eClick izquierdo: ver detalles. &aClick derecho: aceptar contrato.", Map.of());
+            if (acceptedMission) {
+                List<String> controls = modeFlexibleLore(mode, "main.mission-lore.accepted-controls", List.of(
+                        "&eClick izquierdo: ver detalles.",
+                        "&cShift + click derecho: cancelar."
+                ), Map.of());
+                if (hasPendingDelivery(player, instance)) {
+                    int deliveryIndex = Math.min(1, controls.size());
+                    controls.add(deliveryIndex, modeText(mode, "main.mission-lore.delivery-control",
+                            "&6Click derecho: entregar objetos.", Map.of()));
+                }
+                finalLines.addAll(controls);
+            } else if (locked) {
+                finalLines.addAll(modeFlexibleLore(mode, "main.mission-lore.locked-controls", List.of(
+                        "&eClick izquierdo: ver detalles."
+                ), Map.of()));
+            } else {
+                finalLines.addAll(modeFlexibleLore(mode, "main.mission-lore.available-controls", List.of(
+                        "&eClick izquierdo: ver detalles.",
+                        "&aClick derecho: aceptar contrato."
+                ), Map.of()));
+            }
         } else {
-            finalLine = modeText(mode, "main.mission-lore.details", "", Map.of());
+            String details = modeText(mode, "main.mission-lore.details", "", Map.of());
+            if (details != null && !details.isBlank()) finalLines.add(details);
         }
-        if (finalLine != null && !finalLine.isBlank()) {
+        finalLines.removeIf(line -> line == null || line.isBlank());
+        if (!finalLines.isEmpty()) {
             lore.add(Component.empty());
-            lore.add(ItemDisplayUtil.legacy(finalLine));
+            for (String line : finalLines) lore.add(ItemDisplayUtil.legacy(line));
         }
 
         String action = mode == MenuMode.VIEW_ONLY
@@ -441,12 +463,29 @@ public final class QuestMenuManager implements Listener {
         if (mode == MenuMode.INTERACTIVE && acceptedMission && !claimed) {
             ItemMeta meta = decorated.getItemMeta();
             if (meta != null) {
+                // Algunos iconos personalizados (especialmente cofres) pueden traer
+                // ENCHANTMENT_GLINT_OVERRIDE=false. Forzarlo garantiza el brillo de
+                // contrato activo incluso cuando el icono proviene de MMOItems.
+                forceEnchantmentGlint(meta);
                 meta.addEnchant(Enchantment.UNBREAKING, 1, true);
                 meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
                 decorated.setItemMeta(meta);
             }
         }
         return decorated;
+    }
+
+    private void forceEnchantmentGlint(ItemMeta meta) {
+        try {
+            // Paper/Purpur 1.21.6 expone setEnchantmentGlintOverride(Boolean).
+            // La reflexión conserva compatibilidad de compilación con APIs que no
+            // declaren todavía el método, manteniendo el encantamiento como fallback.
+            ItemMeta.class.getMethod("setEnchantmentGlintOverride", Boolean.class)
+                    .invoke(meta, Boolean.TRUE);
+        } catch (ReflectiveOperationException | RuntimeException ignored) {
+            // El encantamiento UNBREAKING aplicado por el llamador sigue funcionando
+            // como respaldo en iconos que no traigan un override explícito a false.
+        }
     }
 
     private boolean hasPendingDelivery(Player player, MissionInstance instance) {
@@ -698,9 +737,13 @@ public final class QuestMenuManager implements Listener {
                 if (event.isShiftClick() && event.isRightClick() && progress.accepted(player, instance)) {
                     progress.cancelMission(player, instance);
                     openMain(player, MenuMode.INTERACTIVE, group, session.mainPage());
-                } else if (event.isRightClick() && !progress.accepted(player, instance)) {
-                    progress.acceptMission(player, instance);
+                } else if (event.isRightClick() && progress.accepted(player, instance) && hasPendingDelivery(player, instance)) {
+                    deliveries.deliverAll(player, instance);
                     openMain(player, MenuMode.INTERACTIVE, group, session.mainPage());
+                } else if (event.isRightClick() && !progress.accepted(player, instance)) {
+                    if (progress.acceptMission(player, instance)) {
+                        openMain(player, MenuMode.INTERACTIVE, group, session.mainPage());
+                    }
                 } else if (event.isLeftClick()) {
                     openDetail(player, instance, 1, session.mainPage());
                 }
@@ -804,6 +847,36 @@ public final class QuestMenuManager implements Listener {
         List<String> result = new ArrayList<>(values.size());
         for (String raw : values) {
             String value = raw;
+            for (Map.Entry<String, String> entry : replacements.entrySet()) {
+                value = value.replace("%" + entry.getKey() + "%", entry.getValue());
+            }
+            result.add(value);
+        }
+        return result;
+    }
+
+    /**
+     * Lee una entrada de lore tanto si el YAML viejo la guardó como String como
+     * si la versión nueva la define como lista. Las líneas antiguas con dos
+     * acciones separadas por punto se dividen automáticamente.
+     */
+    private List<String> modeFlexibleLore(MenuMode mode, String relative, List<String> fallback,
+                                          Map<String, String> replacements) {
+        String primary = modePath(mode, relative);
+        String selectedPath = plugin.getConfig().isSet(primary) ? primary : legacyPath(relative);
+        Object raw = plugin.getConfig().get(selectedPath);
+        List<String> values = new ArrayList<>();
+        if (raw instanceof List<?> list) {
+            for (Object entry : list) if (entry != null) values.add(String.valueOf(entry));
+        } else if (raw != null && !String.valueOf(raw).isBlank()) {
+            String[] split = String.valueOf(raw).split("(?<=\\.)\\s+");
+            for (String entry : split) if (!entry.isBlank()) values.add(entry);
+        }
+        if (values.isEmpty()) values.addAll(fallback);
+
+        List<String> result = new ArrayList<>(values.size());
+        for (String rawLine : values) {
+            String value = rawLine;
             for (Map.Entry<String, String> entry : replacements.entrySet()) {
                 value = value.replace("%" + entry.getKey() + "%", entry.getValue());
             }

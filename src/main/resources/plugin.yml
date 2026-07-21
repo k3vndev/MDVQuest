@@ -1,5 +1,5 @@
 name: MDVQuest
-version: 1.4.1
+version: 1.4.2
 main: com.mdvcraft.mdvquest.MDVQuestPlugin
 api-version: '1.21'
 author: MDVCRAFT
@@ -43,10 +43,10 @@ permissions:
     description: Permite abrir el menú interactivo completo para uno mismo u otro jugador.
     default: op
   mdvquest.access.vip1:
-    description: Permite reclamar recompensas de instancias VIP1.
+    description: Permite aceptar y reclamar instancias VIP1.
     default: false
   mdvquest.access.vip2:
-    description: Permite reclamar recompensas de instancias VIP2.
+    description: Permite aceptar y reclamar instancias VIP2.
     default: false
 
   mdvquest.contract-limit.one-day.3:

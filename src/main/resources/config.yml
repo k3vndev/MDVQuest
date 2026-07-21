@@ -170,7 +170,7 @@ menus:
         selected-name: " "
 
       access:
-        locked-line: "&b● Necesitas el rango &f%rank% &bpara reclamar la recompensa de esta misión."
+        locked-line: "&b● Necesitas el rango &f%rank% &bpara aceptar y reclamar esta misión."
         vip1-line: "&b● Misión VIP"
         vip2-line: "&e● Misión VIP 2"
 
@@ -282,7 +282,7 @@ menus:
         selected-name: " "
 
       access:
-        locked-line: "&b● Necesitas el rango &f%rank% &bpara reclamar la recompensa de esta misión."
+        locked-line: "&b● Necesitas el rango &f%rank% &bpara aceptar y reclamar esta misión."
         vip1-line: "&b● Misión VIP"
         vip2-line: "&e● Misión VIP 2"
 
@@ -318,8 +318,16 @@ menus:
         contract-count: "&7Contratos activos: &f%accepted%/%limit%"
         accepted-state: "&a✦ Contrato en curso"
         available-state: "&eDisponible para aceptar"
-        accepted-controls: "&eClick izquierdo: ver detalles. &cShift + click derecho: cancelar."
-        available-controls: "&eClick izquierdo: ver detalles. &aClick derecho: aceptar contrato."
+        locked-state: "&cNo disponible para aceptar"
+        delivery-control: "&6Click derecho: entregar objetos."
+        locked-controls:
+          - "&eClick izquierdo: ver detalles."
+        accepted-controls:
+          - "&eClick izquierdo: ver detalles."
+          - "&cShift + click derecho: cancelar."
+        available-controls:
+          - "&eClick izquierdo: ver detalles."
+          - "&aClick derecho: aceptar contrato."
 
       categories:
         one-day:
@@ -499,7 +507,7 @@ messages:
   interactive-opened: "&aMenú interactivo abierto para &f%player%&a."
   interactive-target-no-permission: "&cEl jugador &f%player% &cno tiene permiso para usar MDVQuest."
   forced-rotation: "&aRotacion regenerada: &f%rotation%"
-  mission-rank-required: "&cNecesitas el rango &f%rank% &cpara reclamar esta recompensa."
+  mission-rank-required: "&cNecesitas el rango &f%rank% &cpara aceptar o reclamar esta misión."
   reroll-warning: "&eEsto borrará el progreso y recompensas pendientes de la rotación &f%rotation%&e. Confirma con: &f%command%"
   reroll-all-warning: "&cEsto regenerará TODAS las rotaciones y borrará todo su progreso/recompensas pendientes. Confirma con: &f%command%"
   reroll-success: "&aReroll completado para la rotación: &f%rotation%"
