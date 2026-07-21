@@ -62,6 +62,39 @@ public final class ProgressService {
         }
     }
 
+    /**
+     * Elimina de la caché en memoria cualquier rastro de las instancias indicadas.
+     *
+     * SQLite puede haber borrado correctamente una rotación, pero si un reroll crea
+     * otra misión con el mismo identificador lógico, una aceptación antigua podría
+     * seguir viva en la caché del jugador hasta reconectarse. Esta invalidación borra
+     * aceptación, progreso, reclamación y escrituras pendientes antes de reutilizar
+     * el menú o guardar de nuevo el estado.
+     */
+    public synchronized int invalidateInstances(Set<String> instanceIds) {
+        if (instanceIds == null || instanceIds.isEmpty()) return 0;
+        int affectedPlayers = 0;
+        for (PlayerQuestState state : cache.values()) {
+            int progressBefore = state.progress().size();
+            int claimedBefore = state.claimedInstances().size();
+            int acceptedBefore = state.acceptedInstances().size();
+            int dirtyBefore = state.dirty().size();
+
+            state.progress().keySet().removeIf(key -> instanceIds.contains(key.instanceId()));
+            state.claimedInstances().removeIf(instanceIds::contains);
+            state.acceptedInstances().removeIf(instanceIds::contains);
+            state.dirty().removeIf(key -> instanceIds.contains(key.instanceId()));
+
+            if (progressBefore != state.progress().size()
+                    || claimedBefore != state.claimedInstances().size()
+                    || acceptedBefore != state.acceptedInstances().size()
+                    || dirtyBefore != state.dirty().size()) {
+                affectedPlayers++;
+            }
+        }
+        return affectedPlayers;
+    }
+
     public PlayerQuestState state(Player player) {
         return state(player.getUniqueId());
     }

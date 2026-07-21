@@ -120,6 +120,10 @@ public final class QuestMenuManager implements Listener {
     }
 
     private void openMain(Player player, MenuMode mode, DurationGroup group, int requestedPage) {
+        // Si el jugador abre /quest justo al cambiar el ciclo, actualizamos antes de
+        // construir la GUI para que ningún contrato vencido permanezca visible hasta
+        // el siguiente tick de mantenimiento.
+        plugin.synchronizeRotations();
         List<MissionInstance> all = rotations.activeInstances();
         if (all.isEmpty()) {
             plugin.message(player, "no-active-missions", Map.of());

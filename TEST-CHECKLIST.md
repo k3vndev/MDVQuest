@@ -189,3 +189,13 @@ Prueba esta versión en una copia de Purpur 1.21.6 antes de producción.
 - [ ] Las misiones sin objetivos de entrega pendientes no muestran la acción rápida ni consumen objetos con clic derecho.
 - [ ] Los iconos de cofre personalizados de una misión aceptada muestran brillo encantado, igual que los demás materiales.
 - [ ] `Click izquierdo: ver detalles` y `Click derecho: aceptar contrato` aparecen en líneas separadas, también tras migrar una configuración 1.4.1 existente.
+
+
+## MDVQuest 1.4.3 — limpieza de reroll y vencimiento
+
+- [ ] Aceptar una misión y ejecutar `/mdvquest reroll daily confirmar`: la misión anterior desaparece de `/quest` inmediatamente.
+- [ ] Si el reroll vuelve a seleccionar la misma definición, aparece como contrato nuevo y no aceptado, con progreso 0.
+- [ ] Aceptar misiones de varias duraciones y ejecutar `/mdvquest reroll all confirmar`: `/quest` queda vacío hasta aceptar contratos del nuevo roll.
+- [ ] Mantener un jugador conectado durante el cambio real de día y abrir `/quest`: los contratos diarios vencidos desaparecen sin reconectar ni esperar el intervalo de limpieza.
+- [ ] Confirmar en SQLite que no quedan filas antiguas de aceptación, progreso, claims o víctimas PvP para las instancias eliminadas.
+- [ ] Reiniciar después de un reroll y verificar que ningún contrato anterior reaparece.

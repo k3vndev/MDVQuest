@@ -223,8 +223,12 @@ public final class RotationService {
         }
 
         List<MissionInstance> instances = new ArrayList<>();
+        String generationSuffix = extraSeed == null || extraSeed.isBlank() ? "" : ":" + extraSeed;
         for (MissionDefinition definition : selected) {
-            String id = window.cycleKey() + ":" + generatedTier.key() + ":" + definition.id();
+            // Un reroll dentro del mismo ciclo necesita IDs nuevos. De lo contrario,
+            // una definición sorteada nuevamente reutiliza el ID anterior y una caché
+            // todavía cargada puede interpretarla como el contrato viejo.
+            String id = window.cycleKey() + generationSuffix + ":" + generatedTier.key() + ":" + definition.id();
             instances.add(new MissionInstance(id, window.cycleKey(), rotation.id(), generatedTier,
                     definition, window.startsAt(), window.expiresAt()));
         }
@@ -285,6 +289,19 @@ public final class RotationService {
                 .filter(instance -> instance.isActive(now))
                 .map(MissionInstance::id)
                 .collect(java.util.stream.Collectors.toUnmodifiableSet());
+    }
+
+    /** IDs conocidos de una rotación, incluidos los que acaban de vencer y aún no fueron refrescados. */
+    public synchronized Set<String> instanceIdsForRotation(String rotationId) {
+        return active.values().stream()
+                .filter(instance -> instance.rotationId().equals(rotationId))
+                .map(MissionInstance::id)
+                .collect(java.util.stream.Collectors.toUnmodifiableSet());
+    }
+
+    /** Todos los IDs todavía presentes en memoria antes de una regeneración global. */
+    public synchronized Set<String> knownInstanceIds() {
+        return Set.copyOf(active.keySet());
     }
 
     public synchronized Collection<String> currentCycles() {

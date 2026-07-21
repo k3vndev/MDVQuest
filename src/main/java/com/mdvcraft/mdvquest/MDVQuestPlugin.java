@@ -34,6 +34,7 @@ import org.bukkit.scheduler.BukkitTask;
 import java.io.File;
 import java.sql.SQLException;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -137,20 +138,30 @@ public final class MDVQuestPlugin extends JavaPlugin {
         flushTask = Bukkit.getScheduler().runTaskTimer(this, progressService::flushOnline, flushTicks, flushTicks);
 
         long cleanupTicks = Math.max(10L, getConfig().getLong("database.cleanup-interval-seconds", 60L)) * 20L;
-        rotationTask = Bukkit.getScheduler().runTaskTimer(this, () -> {
-            long now = System.currentTimeMillis();
-            try {
-                // La limpieza va antes del refresh: primero desaparecen aceptaciones,
-                // progreso, claims y víctimas del ciclo vencido; después se genera el
-                // nuevo roll. Así el cupo se libera únicamente por cambio de ciclo.
-                int cleaned = database.cleanupExpired(now);
-                boolean changed = rotationService.refresh(now);
-                if (changed || cleaned > 0) progressService.rebuildIndex();
-                if (cleaned > 0) database.incrementalVacuum();
-            } catch (SQLException ex) {
-                getLogger().severe("Error actualizando rotaciones: " + ex.getMessage());
-            }
-        }, 20L, cleanupTicks);
+        rotationTask = Bukkit.getScheduler().runTaskTimer(this, this::synchronizeRotations, 20L, cleanupTicks);
+    }
+
+    /**
+     * Sincroniza vencimientos, nuevo roll e índice/caché en una sola operación.
+     * También se invoca antes de abrir el menú para que el cambio de día sea visible
+     * inmediatamente, sin esperar al siguiente intervalo de mantenimiento.
+     */
+    public boolean synchronizeRotations() {
+        if (database == null || rotationService == null || progressService == null) return false;
+        long now = System.currentTimeMillis();
+        try {
+            // La limpieza va antes del refresh: primero desaparecen aceptaciones,
+            // progreso, claims y víctimas del ciclo vencido; después se genera el
+            // nuevo roll. Así el cupo se libera únicamente por cambio de ciclo.
+            int cleaned = database.cleanupExpired(now);
+            boolean changed = rotationService.refresh(now);
+            if (changed || cleaned > 0) progressService.rebuildIndex();
+            if (cleaned > 0) database.incrementalVacuum();
+            return changed || cleaned > 0;
+        } catch (SQLException ex) {
+            getLogger().severe("Error actualizando rotaciones: " + ex.getMessage());
+            return false;
+        }
     }
 
     public void reloadPlugin() {
@@ -176,10 +187,16 @@ public final class MDVQuestPlugin extends JavaPlugin {
     public boolean forceRotate(String rotationId) {
         try {
             progressService.flushAll();
+            Set<String> invalidatedIds = rotationService.instanceIdsForRotation(rotationId);
             boolean result = rotationService.forceRotate(rotationId, System.currentTimeMillis());
             if (result) {
+                int affectedPlayers = progressService.invalidateInstances(invalidatedIds);
                 progressService.rebuildIndex();
                 database.cleanupExpired(System.currentTimeMillis());
+                if (affectedPlayers > 0) {
+                    getLogger().info("Reroll " + rotationId + ": caché antigua invalidada para "
+                            + affectedPlayers + " jugador(es).");
+                }
             }
             return result;
         } catch (SQLException ex) {
@@ -204,18 +221,31 @@ public final class MDVQuestPlugin extends JavaPlugin {
     public int forceRotateAll() {
         int rotated = 0;
         progressService.flushAll();
+        Set<String> invalidatedIds = rotationService.knownInstanceIds();
         long now = System.currentTimeMillis();
         try {
             for (var rotation : registry.rotations()) {
                 if (!rotation.enabled()) continue;
                 if (rotationService.forceRotate(rotation.id(), now + rotated)) rotated++;
             }
-            if (rotated > 0) {
-                progressService.rebuildIndex();
-                database.cleanupExpired(System.currentTimeMillis());
-            }
         } catch (SQLException ex) {
             getLogger().severe("No se pudieron forzar todas las rotaciones: " + ex.getMessage());
+        }
+
+        // Incluso si una rotación posterior falla, las que ya fueron regeneradas no
+        // deben conservar en memoria aceptaciones del roll anterior.
+        if (rotated > 0) {
+            int affectedPlayers = progressService.invalidateInstances(invalidatedIds);
+            progressService.rebuildIndex();
+            try {
+                database.cleanupExpired(System.currentTimeMillis());
+            } catch (SQLException ex) {
+                getLogger().warning("No se pudo completar la limpieza posterior al reroll global: " + ex.getMessage());
+            }
+            if (affectedPlayers > 0) {
+                getLogger().info("Reroll global: caché antigua invalidada para "
+                        + affectedPlayers + " jugador(es).");
+            }
         }
         return rotated;
     }

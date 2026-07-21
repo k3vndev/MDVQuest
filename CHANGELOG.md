@@ -1,3 +1,9 @@
+## 1.4.3
+- Corregido el estado fantasma después de `/mdvquest reroll <rotación|all> confirmar`: la caché de aceptación, progreso, reclamación y escrituras pendientes se invalida para las instancias eliminadas.
+- Los rerolls dentro del mismo ciclo generan IDs de instancia únicos, incluso cuando vuelve a salir la misma definición.
+- Al abrir `/quest` o el menú interactivo se sincronizan primero vencimientos y rotaciones, evitando esperar hasta 60 segundos al mantenimiento periódico.
+- Sin cambios de configuración, YAML de misiones ni esquema SQLite.
+
 ## 1.4.2
 - Las misiones VIP ya no pueden aceptarse sin su permiso de acceso; la validación se realiza también en el servicio y no solo visualmente.
 - En el menú interactivo del NPC, el click derecho sobre una misión aceptada entrega todos sus objetivos de entrega pendientes sin abrir detalles.

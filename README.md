@@ -1,6 +1,13 @@
-# MDVQuest 1.4.2
+# MDVQuest 1.4.3
 
 MDVQuest crea misiones individuales con rotaciones globales: durante cada ciclo todos los jugadores reciben las mismas misiones, pero el progreso y la reclamación pertenecen a cada jugador.
+
+## Novedades de 1.4.3
+
+- Los rerolls invalidan inmediatamente la aceptación, progreso y reclamación conservados en caché.
+- Las instancias regeneradas dentro del mismo ciclo reciben IDs únicos y no heredan el estado de la selección anterior.
+- Abrir `/quest` o el menú del NPC sincroniza primero los vencimientos y el nuevo roll, sin esperar al mantenimiento periódico.
+- No requiere cambios de configuración, misiones ni esquema SQLite.
 
 ## Novedades de 1.4.2
 
