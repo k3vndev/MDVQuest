@@ -1,6 +1,13 @@
-# MDVQuest 1.4.3
+# MDVQuest 1.4.4
 
 MDVQuest crea misiones individuales con rotaciones globales: durante cada ciclo todos los jugadores reciben las mismas misiones, pero el progreso y la reclamación pertenecen a cada jugador.
+
+## Novedades de 1.4.4
+
+- `HARVEST_CROP` reconoce `SWEET_BERRY_BUSH` al cosechar un arbusto completamente maduro con clic derecho.
+- El progreso solo se registra cuando el arbusto permanece colocado y su edad disminuye después de la interacción.
+- Romper el arbusto de bayas no cuenta como cosecha.
+- No requiere cambios en la sintaxis de las misiones: usa `targets: [SWEET_BERRY_BUSH]` y `mature-only: true`.
 
 ## Novedades de 1.4.3
 

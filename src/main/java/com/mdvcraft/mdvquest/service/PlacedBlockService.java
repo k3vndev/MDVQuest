@@ -48,6 +48,10 @@ public final class PlacedBlockService {
         }
     }
 
+    public boolean isPlaced(Block block) {
+        return block != null && enabled() && placed.contains(BlockPosition.of(block));
+    }
+
     public boolean consumeIfPlaced(Block block) {
         if (block == null || !enabled()) return false;
         BlockPosition position = BlockPosition.of(block);

@@ -1,5 +1,5 @@
 name: MDVQuest
-version: 1.4.3
+version: 1.4.4
 main: com.mdvcraft.mdvquest.MDVQuestPlugin
 api-version: '1.21'
 author: MDVCRAFT

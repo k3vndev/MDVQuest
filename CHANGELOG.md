@@ -1,3 +1,10 @@
+## 1.4.4
+- `HARVEST_CROP` ahora cuenta la cosecha de `SWEET_BERRY_BUSH` mediante clic derecho sobre un arbusto completamente maduro.
+- La interacción se valida en el siguiente tick: solo progresa si el bloque sigue siendo un arbusto de bayas y su edad realmente disminuyó.
+- Romper el arbusto no cuenta como cosecha y los clics duplicados de ambas manos quedan deduplicados.
+- Se conserva el control `natural-only` consultando si el arbusto fue colocado por un jugador.
+- Sin cambios de configuración, YAML de misiones ni esquema SQLite.
+
 ## 1.4.3
 - Corregido el estado fantasma después de `/mdvquest reroll <rotación|all> confirmar`: la caché de aceptación, progreso, reclamación y escrituras pendientes se invalida para las instancias eliminadas.
 - Los rerolls dentro del mismo ciclo generan IDs de instancia únicos, incluso cuando vuelve a salir la misma definición.

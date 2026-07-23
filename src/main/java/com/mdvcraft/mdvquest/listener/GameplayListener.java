@@ -5,10 +5,12 @@ import com.mdvcraft.mdvquest.hook.MMOItemsHook;
 import com.mdvcraft.mdvquest.model.ObjectiveType;
 import com.mdvcraft.mdvquest.service.PlacedBlockService;
 import com.mdvcraft.mdvquest.service.ProgressService;
+import com.mdvcraft.mdvquest.util.BlockPosition;
 import org.bukkit.Bukkit;
 import org.bukkit.Keyed;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.block.Block;
 import org.bukkit.block.data.Ageable;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.HumanEntity;
@@ -42,8 +44,11 @@ import org.bukkit.projectiles.ProjectileSource;
 import org.bukkit.Tag;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 
 public final class GameplayListener implements Listener {
     private final MDVQuestPlugin plugin;
@@ -51,6 +56,7 @@ public final class GameplayListener implements Listener {
     private final PlacedBlockService placedBlocks;
     private final MMOItemsHook mmoItems;
     private final NamespacedKey playerDroppedKey;
+    private final Set<BerryHarvestKey> pendingBerryHarvests = new HashSet<>();
 
     public GameplayListener(MDVQuestPlugin plugin, ProgressService progress, PlacedBlockService placedBlocks, MMOItemsHook mmoItems) {
         this.plugin = plugin;
@@ -103,6 +109,45 @@ public final class GameplayListener implements Listener {
     private boolean isMatureCrop(BlockBreakEvent event) {
         if (!(event.getBlock().getBlockData() instanceof Ageable ageable)) return false;
         return ageable.getAge() >= ageable.getMaximumAge();
+    }
+
+    /**
+     * Las bayas dulces se cosechan sin romper el arbusto. Solo se informa progreso
+     * cuando el jugador hace clic derecho sobre un SWEET_BERRY_BUSH completamente
+     * maduro y, al terminar la interacción vanilla, la edad del bloque disminuyó.
+     * Romper el arbusto nunca pasa por este flujo y no cuenta como cosecha.
+     */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onSweetBerryHarvest(PlayerInteractEvent event) {
+        if (event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
+        Block block = event.getClickedBlock();
+        if (block == null || block.getType() != Material.SWEET_BERRY_BUSH) return;
+        if (!(block.getBlockData() instanceof Ageable before)) return;
+        if (before.getAge() < before.getMaximumAge()) return;
+
+        Player player = event.getPlayer();
+        int beforeAge = before.getAge();
+        boolean natural = !placedBlocks.isPlaced(block);
+        BerryHarvestKey key = new BerryHarvestKey(player.getUniqueId(), BlockPosition.of(block));
+        if (!pendingBerryHarvests.add(key)) return;
+
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            try {
+                if (!player.isOnline()) return;
+                if (block.getType() != Material.SWEET_BERRY_BUSH) return;
+                if (!(block.getBlockData() instanceof Ageable after)) return;
+                if (after.getAge() >= beforeAge) return;
+
+                progress.report(player, ObjectiveType.HARVEST_CROP, Material.SWEET_BERRY_BUSH.name(), 1L,
+                        Map.of(
+                                "natural", Boolean.toString(natural),
+                                "mature", "true",
+                                "harvest-method", "RIGHT_CLICK"
+                        ));
+            } finally {
+                pendingBerryHarvests.remove(key);
+            }
+        });
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -236,4 +281,6 @@ public final class GameplayListener implements Listener {
         progress.report(player, ObjectiveType.OBTAIN_MMOITEM, identity.get().combined(), pickedUp,
                 Map.of("mmo-type", identity.get().type(), "mmo-id", identity.get().id(), "source", "PICKUP"));
     }
+
+    private record BerryHarvestKey(UUID playerId, BlockPosition position) { }
 }

@@ -199,3 +199,14 @@ Prueba esta versión en una copia de Purpur 1.21.6 antes de producción.
 - [ ] Mantener un jugador conectado durante el cambio real de día y abrir `/quest`: los contratos diarios vencidos desaparecen sin reconectar ni esperar el intervalo de limpieza.
 - [ ] Confirmar en SQLite que no quedan filas antiguas de aceptación, progreso, claims o víctimas PvP para las instancias eliminadas.
 - [ ] Reiniciar después de un reroll y verificar que ningún contrato anterior reaparece.
+
+
+## MDVQuest 1.4.4 — cosecha de bayas dulces
+
+1. Acepta una misión `HARVEST_CROP` cuyo objetivo sea `SWEET_BERRY_BUSH`, con `mature-only: true`.
+2. Haz clic derecho sobre un arbusto en edad máxima y confirma que suma exactamente `1`.
+3. Confirma que el arbusto permanece colocado y vuelve a una edad inferior después de soltar las bayas.
+4. Haz clic derecho sobre un arbusto inmaduro y confirma que no suma progreso.
+5. Rompe un arbusto maduro y confirma que no suma progreso.
+6. Haz clic derecho teniendo objetos en ambas manos y confirma que solo suma una vez.
+7. Con `natural-only: true`, confirma que un arbusto colocado por un jugador no suma y uno natural sí.
