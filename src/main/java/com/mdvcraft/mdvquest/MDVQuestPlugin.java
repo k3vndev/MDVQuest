@@ -11,6 +11,7 @@ import com.mdvcraft.mdvquest.hook.MythicItemsHook;
 import com.mdvcraft.mdvquest.hook.PlaceholderHook;
 import com.mdvcraft.mdvquest.listener.GameplayListener;
 import com.mdvcraft.mdvquest.service.AccessService;
+import com.mdvcraft.mdvquest.service.ActionBarManager;
 import com.mdvcraft.mdvquest.service.DeliveryService;
 import com.mdvcraft.mdvquest.service.ExampleRewardSanitizer;
 import com.mdvcraft.mdvquest.service.IntegrationService;
@@ -61,6 +62,7 @@ public final class MDVQuestPlugin extends JavaPlugin {
     private ExecutorService databaseExecutor;
     private BukkitTask flushTask;
     private BukkitTask rotationTask;
+    public ActionBarManager actionBarManager = null;
 
     @Override
     public void onEnable() {
@@ -71,6 +73,8 @@ public final class MDVQuestPlugin extends JavaPlugin {
         saveResourceIfMissing("families.yml");
         saveResourceIfMissing("missions/examples.yml");
         new ExampleRewardSanitizer(this).run();
+        actionBarManager = new ActionBarManager(this);
+
         databaseExecutor = Executors.newSingleThreadExecutor(runnable -> {
             Thread thread = new Thread(runnable, "MDVQuest-Database");
             thread.setDaemon(true);
@@ -88,15 +92,19 @@ public final class MDVQuestPlugin extends JavaPlugin {
             placedBlockService = new PlacedBlockService(this, registry, database);
             placedBlockService.initialize();
             accessService = new AccessService(this);
-            rewardService = new RewardService(this, progressService, database, mmoItemsHook, mythicItemsHook, accessService);
+            rewardService = new RewardService(this, progressService, database, mmoItemsHook, mythicItemsHook,
+                    accessService);
             deliveryService = new DeliveryService(this, progressService, mmoItemsHook);
-            menuManager = new QuestMenuManager(this, rotationService, progressService, rewardService, deliveryService, accessService);
+            menuManager = new QuestMenuManager(this, rotationService, progressService, rewardService, deliveryService,
+                    accessService);
             promptManager = new ChatPromptManager(this);
             yamlService = new QuestYamlService(this);
-            editorManager = new QuestEditorManager(this, promptManager, yamlService, rewardService, mmoItemsHook, mythicItemsHook);
+            editorManager = new QuestEditorManager(this, promptManager, yamlService, rewardService, mmoItemsHook,
+                    mythicItemsHook);
             integrationService = new IntegrationService(this, progressService, mmoItemsHook);
 
-            Bukkit.getPluginManager().registerEvents(new GameplayListener(this, progressService, placedBlockService, mmoItemsHook), this);
+            Bukkit.getPluginManager().registerEvents(
+                    new GameplayListener(this, progressService, placedBlockService, mmoItemsHook), this);
             Bukkit.getPluginManager().registerEvents(menuManager, this);
             Bukkit.getPluginManager().registerEvents(promptManager, this);
             Bukkit.getPluginManager().registerEvents(editorManager, this);
@@ -109,10 +117,12 @@ public final class MDVQuestPlugin extends JavaPlugin {
                 command.setTabCompleter(executor);
             }
 
-            for (Player player : Bukkit.getOnlinePlayers()) progressService.preload(player);
+            for (Player player : Bukkit.getOnlinePlayers())
+                progressService.preload(player);
             scheduleTasks();
             new MDVSocialMenuInstaller(this).installIfNeeded();
-            getLogger().info("MDVQuest " + getDescription().getVersion() + " habilitado. Definiciones: " + definitions + ", activas: " + rotationService.activeInstances().size());
+            getLogger().info("MDVQuest " + getDescription().getVersion() + " habilitado. Definiciones: " + definitions
+                    + ", activas: " + rotationService.activeInstances().size());
         } catch (Exception ex) {
             getLogger().severe("No se pudo iniciar MDVQuest: " + ex.getMessage());
             ex.printStackTrace();
@@ -122,15 +132,22 @@ public final class MDVQuestPlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        if (flushTask != null) flushTask.cancel();
-        if (rotationTask != null) rotationTask.cancel();
-        if (progressService != null) progressService.flushAll();
+        if (flushTask != null)
+            flushTask.cancel();
+        if (rotationTask != null)
+            rotationTask.cancel();
+        if (progressService != null)
+            progressService.flushAll();
         if (databaseExecutor != null) {
             databaseExecutor.shutdown();
-            try { databaseExecutor.awaitTermination(5, TimeUnit.SECONDS); }
-            catch (InterruptedException ignored) { Thread.currentThread().interrupt(); }
+            try {
+                databaseExecutor.awaitTermination(5, TimeUnit.SECONDS);
+            } catch (InterruptedException ignored) {
+                Thread.currentThread().interrupt();
+            }
         }
-        if (database != null) database.close();
+        if (database != null)
+            database.close();
     }
 
     private void scheduleTasks() {
@@ -143,11 +160,13 @@ public final class MDVQuestPlugin extends JavaPlugin {
 
     /**
      * Sincroniza vencimientos, nuevo roll e índice/caché en una sola operación.
-     * También se invoca antes de abrir el menú para que el cambio de día sea visible
+     * También se invoca antes de abrir el menú para que el cambio de día sea
+     * visible
      * inmediatamente, sin esperar al siguiente intervalo de mantenimiento.
      */
     public boolean synchronizeRotations() {
-        if (database == null || rotationService == null || progressService == null) return false;
+        if (database == null || rotationService == null || progressService == null)
+            return false;
         long now = System.currentTimeMillis();
         try {
             // La limpieza va antes del refresh: primero desaparecen aceptaciones,
@@ -155,8 +174,10 @@ public final class MDVQuestPlugin extends JavaPlugin {
             // nuevo roll. Así el cupo se libera únicamente por cambio de ciclo.
             int cleaned = database.cleanupExpired(now);
             boolean changed = rotationService.refresh(now);
-            if (changed || cleaned > 0) progressService.rebuildIndex();
-            if (cleaned > 0) database.incrementalVacuum();
+            if (changed || cleaned > 0)
+                progressService.rebuildIndex();
+            if (cleaned > 0)
+                database.incrementalVacuum();
             return changed || cleaned > 0;
         } catch (SQLException ex) {
             getLogger().severe("Error actualizando rotaciones: " + ex.getMessage());
@@ -172,11 +193,15 @@ public final class MDVQuestPlugin extends JavaPlugin {
         saveConfig();
         new ExampleRewardSanitizer(this).run();
         registry.reload();
+        actionBarManager = new ActionBarManager(this);
+
         try {
             rotationService.initialize();
             progressService.rebuildIndex();
-            if (flushTask != null) flushTask.cancel();
-            if (rotationTask != null) rotationTask.cancel();
+            if (flushTask != null)
+                flushTask.cancel();
+            if (rotationTask != null)
+                rotationTask.cancel();
             scheduleTasks();
             new MDVSocialMenuInstaller(this).installIfNeeded();
         } catch (SQLException ex) {
@@ -225,8 +250,10 @@ public final class MDVQuestPlugin extends JavaPlugin {
         long now = System.currentTimeMillis();
         try {
             for (var rotation : registry.rotations()) {
-                if (!rotation.enabled()) continue;
-                if (rotationService.forceRotate(rotation.id(), now + rotated)) rotated++;
+                if (!rotation.enabled())
+                    continue;
+                if (rotationService.forceRotate(rotation.id(), now + rotated))
+                    rotated++;
             }
         } catch (SQLException ex) {
             getLogger().severe("No se pudieron forzar todas las rotaciones: " + ex.getMessage());
@@ -251,7 +278,8 @@ public final class MDVQuestPlugin extends JavaPlugin {
     }
 
     public void runDatabaseAsync(Runnable task) {
-        if (databaseExecutor == null || databaseExecutor.isShutdown()) return;
+        if (databaseExecutor == null || databaseExecutor.isShutdown())
+            return;
         databaseExecutor.execute(task);
     }
 
@@ -261,7 +289,8 @@ public final class MDVQuestPlugin extends JavaPlugin {
 
     public void message(CommandSender sender, String key, Map<String, String> replacements) {
         String value = getConfig().getString("messages." + key, key);
-        if (value == null || value.isBlank()) return;
+        if (value == null || value.isBlank())
+            return;
         for (Map.Entry<String, String> replacement : replacements.entrySet()) {
             value = value.replace("%" + replacement.getKey() + "%", replacement.getValue());
         }
@@ -270,9 +299,11 @@ public final class MDVQuestPlugin extends JavaPlugin {
 
     private void saveResourceIfMissing(String path) {
         File file = new File(getDataFolder(), path);
-        if (file.exists()) return;
+        if (file.exists())
+            return;
         File parent = file.getParentFile();
-        if (parent != null && !parent.exists()) parent.mkdirs();
+        if (parent != null && !parent.exists())
+            parent.mkdirs();
         saveResource(path, false);
     }
 
@@ -303,7 +334,8 @@ public final class MDVQuestPlugin extends JavaPlugin {
         changed |= migrateLegacyCompletionMessage();
         changed |= migrateContractMenuConfig();
         changed |= migrateQuest142Config();
-        if (changed) saveConfig();
+        if (changed)
+            saveConfig();
     }
 
     /**
@@ -335,8 +367,7 @@ public final class MDVQuestPlugin extends JavaPlugin {
         if (oldAccepted.equals(getConfig().getString(acceptedPath))) {
             getConfig().set(acceptedPath, java.util.List.of(
                     "&eClick izquierdo: ver detalles.",
-                    "&cShift + click derecho: cancelar."
-            ));
+                    "&cShift + click derecho: cancelar."));
             changed = true;
         }
 
@@ -345,15 +376,16 @@ public final class MDVQuestPlugin extends JavaPlugin {
         if (oldAvailable.equals(getConfig().getString(availablePath))) {
             getConfig().set(availablePath, java.util.List.of(
                     "&eClick izquierdo: ver detalles.",
-                    "&aClick derecho: aceptar contrato."
-            ));
+                    "&aClick derecho: aceptar contrato."));
             changed = true;
         }
         return changed;
     }
 
-
-    /** Añade los placeholders visuales de 1.4.0 sin reemplazar diseños personalizados. */
+    /**
+     * Añade los placeholders visuales de 1.4.0 sin reemplazar diseños
+     * personalizados.
+     */
     private boolean migrateContractMenuConfig() {
         boolean changed = false;
         for (String mode : java.util.List.of("viewer", "interactive")) {
@@ -366,7 +398,8 @@ public final class MDVQuestPlugin extends JavaPlugin {
             for (String category : java.util.List.of("one-day", "two-three-days", "four-six-days", "seven-days")) {
                 String lorePath = "menus." + mode + ".main.categories." + category + ".lore";
                 java.util.List<String> lore = new java.util.ArrayList<>(getConfig().getStringList(lorePath));
-                boolean present = lore.stream().anyMatch(line -> line.contains("%accepted%") || line.contains("%limit%"));
+                boolean present = lore.stream()
+                        .anyMatch(line -> line.contains("%accepted%") || line.contains("%limit%"));
                 if (!present && !lore.isEmpty()) {
                     lore.add(0, "&7Contratos aceptados: &f%accepted%/%limit%");
                     getConfig().set(lorePath, lore);
@@ -378,43 +411,87 @@ public final class MDVQuestPlugin extends JavaPlugin {
     }
 
     private boolean migrateLegacyCompletionMessage() {
-        if (!getConfig().contains("messages.mission-completed", true)) return false;
+        if (!getConfig().contains("messages.mission-completed", true))
+            return false;
         String current = getConfig().getString("messages.mission-completed", "");
         String normalized = current == null ? "" : current.toLowerCase(java.util.Locale.ROOT);
-        if (!normalized.contains("abre &f/misiones") && !normalized.contains("abre /misiones")) return false;
+        if (!normalized.contains("abre &f/misiones") && !normalized.contains("abre /misiones"))
+            return false;
         getConfig().set("messages.mission-completed",
                 "&a&lMision completada: &f%mission% &7Visita al encargado de misiones para reclamarla antes de que expire.");
         return true;
     }
 
     private boolean copySectionIfMissing(String sourcePath, String targetPath) {
-        if (getConfig().contains(targetPath, true)) return false;
+        if (getConfig().contains(targetPath, true))
+            return false;
         ConfigurationSection source = getConfig().getConfigurationSection(sourcePath);
-        if (source == null) return false;
+        if (source == null)
+            return false;
         for (String key : source.getKeys(true)) {
-            if (source.isConfigurationSection(key)) continue;
+            if (source.isConfigurationSection(key))
+                continue;
             getConfig().set(targetPath + "." + key, source.get(key));
         }
         return true;
     }
 
     private boolean copyValueIfMissing(String sourcePath, String targetPath) {
-        if (getConfig().contains(targetPath, true) || !getConfig().contains(sourcePath, true)) return false;
+        if (getConfig().contains(targetPath, true) || !getConfig().contains(sourcePath, true))
+            return false;
         getConfig().set(targetPath, getConfig().get(sourcePath));
         return true;
     }
 
-    public QuestDatabase getDatabase() { return database; }
-    public QuestRegistry getRegistry() { return registry; }
-    public RotationService getRotationService() { return rotationService; }
-    public ProgressService getProgressService() { return progressService; }
-    public QuestMenuManager getMenuManager() { return menuManager; }
-    public QuestEditorManager getEditorManager() { return editorManager; }
-    public QuestYamlService getYamlService() { return yamlService; }
-    public AccessService getAccessService() { return accessService; }
-    public MDVSocialHook getSocialHook() { return socialHook; }
-    public MMOItemsHook getMmoItemsHook() { return mmoItemsHook; }
-    public MythicMobsHook getMythicMobsHook() { return mythicMobsHook; }
-    public MythicItemsHook getMythicItemsHook() { return mythicItemsHook; }
-    public PlaceholderHook getPlaceholderHook() { return placeholderHook; }
+    public QuestDatabase getDatabase() {
+        return database;
+    }
+
+    public QuestRegistry getRegistry() {
+        return registry;
+    }
+
+    public RotationService getRotationService() {
+        return rotationService;
+    }
+
+    public ProgressService getProgressService() {
+        return progressService;
+    }
+
+    public QuestMenuManager getMenuManager() {
+        return menuManager;
+    }
+
+    public QuestEditorManager getEditorManager() {
+        return editorManager;
+    }
+
+    public QuestYamlService getYamlService() {
+        return yamlService;
+    }
+
+    public AccessService getAccessService() {
+        return accessService;
+    }
+
+    public MDVSocialHook getSocialHook() {
+        return socialHook;
+    }
+
+    public MMOItemsHook getMmoItemsHook() {
+        return mmoItemsHook;
+    }
+
+    public MythicMobsHook getMythicMobsHook() {
+        return mythicMobsHook;
+    }
+
+    public MythicItemsHook getMythicItemsHook() {
+        return mythicItemsHook;
+    }
+
+    public PlaceholderHook getPlaceholderHook() {
+        return placeholderHook;
+    }
 }

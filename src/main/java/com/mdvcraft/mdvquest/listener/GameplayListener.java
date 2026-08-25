@@ -58,7 +58,8 @@ public final class GameplayListener implements Listener {
     private final NamespacedKey playerDroppedKey;
     private final Set<BerryHarvestKey> pendingBerryHarvests = new HashSet<>();
 
-    public GameplayListener(MDVQuestPlugin plugin, ProgressService progress, PlacedBlockService placedBlocks, MMOItemsHook mmoItems) {
+    public GameplayListener(MDVQuestPlugin plugin, ProgressService progress, PlacedBlockService placedBlocks,
+            MMOItemsHook mmoItems) {
         this.plugin = plugin;
         this.progress = progress;
         this.placedBlocks = placedBlocks;
@@ -107,7 +108,8 @@ public final class GameplayListener implements Listener {
     }
 
     private boolean isMatureCrop(BlockBreakEvent event) {
-        if (!(event.getBlock().getBlockData() instanceof Ageable ageable)) return false;
+        if (!(event.getBlock().getBlockData() instanceof Ageable ageable))
+            return false;
         return ageable.getAge() >= ageable.getMaximumAge();
     }
 
@@ -119,31 +121,39 @@ public final class GameplayListener implements Listener {
      */
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onSweetBerryHarvest(PlayerInteractEvent event) {
-        if (event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
+        if (event.getAction() != Action.RIGHT_CLICK_BLOCK)
+            return;
         Block block = event.getClickedBlock();
-        if (block == null || block.getType() != Material.SWEET_BERRY_BUSH) return;
-        if (!(block.getBlockData() instanceof Ageable before)) return;
-        if (before.getAge() < before.getMaximumAge()) return;
+        if (block == null || block.getType() != Material.SWEET_BERRY_BUSH)
+            return;
+        if (!(block.getBlockData() instanceof Ageable before))
+            return;
+        if (before.getAge() < before.getMaximumAge())
+            return;
 
         Player player = event.getPlayer();
         int beforeAge = before.getAge();
         boolean natural = !placedBlocks.isPlaced(block);
         BerryHarvestKey key = new BerryHarvestKey(player.getUniqueId(), BlockPosition.of(block));
-        if (!pendingBerryHarvests.add(key)) return;
+        if (!pendingBerryHarvests.add(key))
+            return;
 
         Bukkit.getScheduler().runTask(plugin, () -> {
             try {
-                if (!player.isOnline()) return;
-                if (block.getType() != Material.SWEET_BERRY_BUSH) return;
-                if (!(block.getBlockData() instanceof Ageable after)) return;
-                if (after.getAge() >= beforeAge) return;
+                if (!player.isOnline())
+                    return;
+                if (block.getType() != Material.SWEET_BERRY_BUSH)
+                    return;
+                if (!(block.getBlockData() instanceof Ageable after))
+                    return;
+                if (after.getAge() >= beforeAge)
+                    return;
 
                 progress.report(player, ObjectiveType.HARVEST_CROP, Material.SWEET_BERRY_BUSH.name(), 1L,
                         Map.of(
                                 "natural", Boolean.toString(natural),
                                 "mature", "true",
-                                "harvest-method", "RIGHT_CLICK"
-                        ));
+                                "harvest-method", "RIGHT_CLICK"));
             } finally {
                 pendingBerryHarvests.remove(key);
             }
@@ -164,9 +174,11 @@ public final class GameplayListener implements Listener {
     public void onDeath(EntityDeathEvent event) {
         LivingEntity dead = event.getEntity();
         Player killer = dead.getKiller();
-        if (killer == null) return;
+        if (killer == null)
+            return;
         if (dead instanceof Player victim) {
-            if (!plugin.getConfig().getBoolean("anti-exploit.pvp.require-direct-killer", true) || isDirectPlayerKill(killer, victim)) {
+            if (!plugin.getConfig().getBoolean("anti-exploit.pvp.require-direct-killer", true)
+                    || isDirectPlayerKill(killer, victim)) {
                 progress.reportPlayerKill(killer, victim);
             }
             return;
@@ -183,11 +195,12 @@ public final class GameplayListener implements Listener {
         }
     }
 
-
     private boolean isDirectPlayerKill(Player killer, Player victim) {
-        if (!(victim.getLastDamageCause() instanceof EntityDamageByEntityEvent damage)) return false;
+        if (!(victim.getLastDamageCause() instanceof EntityDamageByEntityEvent damage))
+            return false;
         Entity damager = damage.getDamager();
-        if (damager instanceof Player player) return player.getUniqueId().equals(killer.getUniqueId());
+        if (damager instanceof Player player)
+            return player.getUniqueId().equals(killer.getUniqueId());
         if (damager instanceof Projectile projectile) {
             ProjectileSource source = projectile.getShooter();
             if (source instanceof Player shooter) {
@@ -200,11 +213,14 @@ public final class GameplayListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onVanillaCraft(CraftItemEvent event) {
         HumanEntity clicker = event.getWhoClicked();
-        if (!(clicker instanceof Player player)) return;
+        if (!(clicker instanceof Player player))
+            return;
         Recipe recipe = event.getRecipe();
-        if (recipe instanceof Keyed keyed && keyed.getKey().getNamespace().equalsIgnoreCase("mdvrecetas")) return;
+        if (recipe instanceof Keyed keyed && keyed.getKey().getNamespace().equalsIgnoreCase("mdvrecetas"))
+            return;
         ItemStack result = recipe == null ? null : recipe.getResult();
-        if (result == null || result.getType().isAir()) return;
+        if (result == null || result.getType().isAir())
+            return;
         int operations = estimateCraftOperations(event);
         long produced = (long) Math.max(1, result.getAmount()) * operations;
         progress.report(player, ObjectiveType.CRAFT_VANILLA_ITEM, result.getType().name(), produced,
@@ -212,11 +228,13 @@ public final class GameplayListener implements Listener {
     }
 
     private int estimateCraftOperations(CraftItemEvent event) {
-        if (!event.isShiftClick()) return 1;
+        if (!event.isShiftClick())
+            return 1;
         CraftingInventory crafting = event.getInventory();
         int min = Integer.MAX_VALUE;
         for (ItemStack item : crafting.getMatrix()) {
-            if (item == null || item.getType().isAir()) continue;
+            if (item == null || item.getType().isAir())
+                continue;
             min = Math.min(min, item.getAmount());
         }
         return min == Integer.MAX_VALUE ? 1 : Math.max(1, min);
@@ -228,37 +246,44 @@ public final class GameplayListener implements Listener {
         Optional<MMOItemsHook.Identity> identity = mmoItems.identify(item);
         if (identity.isPresent()) {
             progress.report(event.getPlayer(), ObjectiveType.USE_CONSUMABLE, identity.get().combined(), 1L,
-                    Map.of("mmo-type", identity.get().type(), "mmo-id", identity.get().id(), "source", "CONSUME_EVENT"));
+                    Map.of("mmo-type", identity.get().type(), "mmo-id", identity.get().id(), "source",
+                            "CONSUME_EVENT"));
         } else {
             progress.report(event.getPlayer(), ObjectiveType.USE_CONSUMABLE, item.getType().name(), 1L);
         }
     }
 
-
     /**
-     * Cubre consumibles MMOItems instantaneos que se usan con click derecho y no disparan
-     * PlayerItemConsumeEvent. Solo progresa si el stack realmente disminuyo o desaparecio.
+     * Cubre consumibles MMOItems instantaneos que se usan con click derecho y no
+     * disparan
+     * PlayerItemConsumeEvent. Solo progresa si el stack realmente disminuyo o
+     * desaparecio.
      */
     @EventHandler(priority = EventPriority.MONITOR)
     public void onMmoConsumableInteract(PlayerInteractEvent event) {
-        if (event.getAction() != Action.RIGHT_CLICK_AIR && event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
+        if (event.getAction() != Action.RIGHT_CLICK_AIR && event.getAction() != Action.RIGHT_CLICK_BLOCK)
+            return;
         EquipmentSlot hand = event.getHand();
-        if (hand == null) return;
+        if (hand == null)
+            return;
         ItemStack before = event.getItem();
         Optional<MMOItemsHook.Identity> identity = mmoItems.identify(before);
-        if (identity.isEmpty() || !identity.get().type().equals("CONSUMABLE")) return;
+        if (identity.isEmpty() || !identity.get().type().equals("CONSUMABLE"))
+            return;
         int beforeAmount = before == null ? 0 : before.getAmount();
         MMOItemsHook.Identity expected = identity.get();
 
         Bukkit.getScheduler().runTask(plugin, () -> {
-            if (!event.getPlayer().isOnline()) return;
+            if (!event.getPlayer().isOnline())
+                return;
             ItemStack after = hand == EquipmentSlot.OFF_HAND
                     ? event.getPlayer().getInventory().getItemInOffHand()
                     : event.getPlayer().getInventory().getItemInMainHand();
             Optional<MMOItemsHook.Identity> afterIdentity = mmoItems.identify(after);
             boolean sameItem = afterIdentity.isPresent() && afterIdentity.get().equals(expected);
             int afterAmount = after == null || after.getType().isAir() ? 0 : after.getAmount();
-            if (sameItem && afterAmount >= beforeAmount) return;
+            if (sameItem && afterAmount >= beforeAmount)
+                return;
             progress.report(event.getPlayer(), ObjectiveType.USE_CONSUMABLE, expected.combined(), 1L,
                     Map.of("mmo-type", expected.type(), "mmo-id", expected.id(), "source", "MMOITEMS_INTERACT"));
         });
@@ -271,16 +296,21 @@ public final class GameplayListener implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onPickup(EntityPickupItemEvent event) {
-        if (!(event.getEntity() instanceof Player player)) return;
-        if (event.getItem().getPersistentDataContainer().has(playerDroppedKey, PersistentDataType.BYTE)) return;
+        if (!(event.getEntity() instanceof Player player))
+            return;
+        if (event.getItem().getPersistentDataContainer().has(playerDroppedKey, PersistentDataType.BYTE))
+            return;
         ItemStack item = event.getItem().getItemStack();
         Optional<MMOItemsHook.Identity> identity = mmoItems.identify(item);
-        if (identity.isEmpty()) return;
+        if (identity.isEmpty())
+            return;
         int pickedUp = Math.max(0, item.getAmount() - event.getRemaining());
-        if (pickedUp <= 0) return;
+        if (pickedUp <= 0)
+            return;
         progress.report(player, ObjectiveType.OBTAIN_MMOITEM, identity.get().combined(), pickedUp,
                 Map.of("mmo-type", identity.get().type(), "mmo-id", identity.get().id(), "source", "PICKUP"));
     }
 
-    private record BerryHarvestKey(UUID playerId, BlockPosition position) { }
+    private record BerryHarvestKey(UUID playerId, BlockPosition position) {
+    }
 }
