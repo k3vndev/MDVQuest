@@ -26,6 +26,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemFlag;
@@ -65,6 +66,7 @@ public final class QuestMenuManager implements Listener {
     private final RewardService rewards;
     private final DeliveryService deliveries;
     private final AccessService access;
+    private final BedrockQuestMenuManager bedrockMenus;
     private final Map<UUID, MenuSession> sessions = new HashMap<>();
     private final NamespacedKey actionKey;
     private final NamespacedKey instanceKey;
@@ -85,6 +87,7 @@ public final class QuestMenuManager implements Listener {
         this.objectiveKey = new NamespacedKey(plugin, "objective_id");
         this.pageKey = new NamespacedKey(plugin, "page");
         this.groupKey = new NamespacedKey(plugin, "duration_group");
+        this.bedrockMenus = new BedrockQuestMenuManager(plugin, rotations, progress, rewards, deliveries, access);
     }
 
     /** Compatibilidad: el menú público normal siempre abre la variante de consulta. */
@@ -93,10 +96,12 @@ public final class QuestMenuManager implements Listener {
     }
 
     public void openViewer(Player player) {
+        if (bedrockMenus.openViewer(player)) return;
         openMain(player, MenuMode.VIEW_ONLY, DurationGroup.ONE_DAY, 1);
     }
 
     public void openInteractive(Player player) {
+        if (bedrockMenus.openInteractive(player)) return;
         openMain(player, MenuMode.INTERACTIVE, DurationGroup.ONE_DAY, 1);
     }
 
@@ -108,15 +113,28 @@ public final class QuestMenuManager implements Listener {
     }
 
     public void openViewer(Player player, int requestedPage) {
+        if (bedrockMenus.openViewer(player)) return;
         MenuSession current = sessions.get(player.getUniqueId());
         DurationGroup group = current == null ? DurationGroup.ONE_DAY : current.group();
         openMain(player, MenuMode.VIEW_ONLY, group, requestedPage);
     }
 
     public void openInteractive(Player player, int requestedPage) {
+        if (bedrockMenus.openInteractive(player)) return;
         MenuSession current = sessions.get(player.getUniqueId());
         DurationGroup group = current == null ? DurationGroup.ONE_DAY : current.group();
         openMain(player, MenuMode.INTERACTIVE, group, requestedPage);
+    }
+
+
+    /** Recarga únicamente los Forms/YAML Bedrock sin alterar las GUIs Java. */
+    public void reloadBedrockMenus() {
+        bedrockMenus.reload();
+    }
+
+    public void shutdown() {
+        bedrockMenus.shutdown();
+        sessions.clear();
     }
 
     private void openMain(Player player, MenuMode mode, DurationGroup group, int requestedPage) {
@@ -771,6 +789,13 @@ public final class QuestMenuManager implements Listener {
         MenuSession session = sessions.get(player.getUniqueId());
         if (session == null || !event.getView().getTopInventory().equals(session.inventory())) return;
         if (event.getRawSlots().stream().anyMatch(slot -> slot < session.inventory().getSize())) event.setCancelled(true);
+    }
+
+    @EventHandler
+    public void onQuit(PlayerQuitEvent event) {
+        Player player = event.getPlayer();
+        sessions.remove(player.getUniqueId());
+        bedrockMenus.clear(player);
     }
 
     @EventHandler

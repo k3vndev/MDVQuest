@@ -1,3 +1,10 @@
+# 1.4.5
+
+- Añade Forms nativos de Floodgate para el visualizador de contratos aceptados.
+- Añade Form nativo para el NPC interactivo: aceptar, entregar, reclamar y cancelar.
+- Añade `MenusBedrock/quest_viewer.yml` y `MenusBedrock/quest_npc.yml` editables.
+- Mantiene las GUIs Java sin cambios.
+
 ## 1.4.4
 - `HARVEST_CROP` ahora cuenta la cosecha de `SWEET_BERRY_BUSH` mediante clic derecho sobre un arbusto completamente maduro.
 - La interacción se valida en el siguiente tick: solo progresa si el bloque sigue siendo un arbusto de bayas y su edad realmente disminuyó.

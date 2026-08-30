@@ -132,6 +132,8 @@ public final class MDVQuestPlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if (menuManager != null)
+            menuManager.shutdown();
         if (flushTask != null)
             flushTask.cancel();
         if (rotationTask != null)
@@ -194,6 +196,8 @@ public final class MDVQuestPlugin extends JavaPlugin {
         new ExampleRewardSanitizer(this).run();
         registry.reload();
         actionBarManager = new ActionBarManager(this);
+        if (menuManager != null)
+            menuManager.reloadBedrockMenus();
 
         try {
             rotationService.initialize();
